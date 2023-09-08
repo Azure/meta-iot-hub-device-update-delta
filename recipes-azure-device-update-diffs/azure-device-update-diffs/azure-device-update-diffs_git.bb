@@ -4,7 +4,7 @@ LICENSE = "CLOSED"
 
 ADU_DELTA_GIT_BRANCH ?= "main"
 
-ADU_DELTA_SRC_URI ?= "gitsm://github.com/azure/io-thub-device-update-delta"
+ADU_DELTA_SRC_URI ?= "gitsm://github.com/azure/iot-hub-device-update-delta"
 SRC_URI = "${ADU_DELTA_SRC_URI};branch=${ADU_DELTA_GIT_BRANCH} \
           file://0001-ADU-v1.0.0-Yocto-mininum-build.patch \
           file://0002-Add-root-CMakeLists.txt.patch \
