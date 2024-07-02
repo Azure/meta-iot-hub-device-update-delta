@@ -1,0 +1,38 @@
+From 42365375c543c4b79534e3accfe5b378ccc0fc08 Mon Sep 17 00:00:00 2001
+From: nox-msft <wewilair@microsoft.com>
+Date: Tue, 2 Jul 2024 05:20:42 +0000
+Subject: [PATCH] Add missing header for uint64_t
+
+---
+ src/diffs/api/adudiffcreate.h  | 2 +-
+ src/diffs/api/create_session.h | 1 +
+ 2 files changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/diffs/api/adudiffcreate.h b/src/diffs/api/adudiffcreate.h
+index 4b54c01..31f3d59 100644
+--- a/src/diffs/api/adudiffcreate.h
++++ b/src/diffs/api/adudiffcreate.h
+@@ -7,7 +7,7 @@
+ #pragma once
+ 
+ #include "adudiffapi.h"
+-
++#include "stdint.h"
+ #ifdef __cplusplus
+ extern "C" {
+ #endif
+diff --git a/src/diffs/api/create_session.h b/src/diffs/api/create_session.h
+index 7dd4d68..fc19ae4 100644
+--- a/src/diffs/api/create_session.h
++++ b/src/diffs/api/create_session.h
+@@ -7,6 +7,7 @@
+ #pragma once
+ 
+ #include <string>
++#include <stdint.h>
+ #include <vector>
+ 
+ #include "adudiffcreate.h"
+-- 
+2.34.1
+

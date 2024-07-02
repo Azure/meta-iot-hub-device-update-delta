@@ -4,7 +4,7 @@ DESCRIPTION = "BSDiff"
 AUTHOR = "zhuyie, Colin Percival"
 HOMEPAGE = "https://github.com/zhuyie/bsdiff"
 
-LICENSE = "bsdiff"
+LICENSE = "MIT"
 LIC_FILES_CHKSUM = "file://LICENSE;md5=f83b6905339a1462b8b70a6d742af235"
 
 

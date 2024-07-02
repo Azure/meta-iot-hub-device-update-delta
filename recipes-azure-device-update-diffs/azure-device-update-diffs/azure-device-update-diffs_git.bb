@@ -4,12 +4,13 @@ LICENSE = "CLOSED"
 
 ADU_DELTA_GIT_BRANCH ?= "main"
 
-ADU_DELTA_SRC_URI ?= "gitsm://github.com/azure/io-thub-device-update-delta"
+ADU_DELTA_SRC_URI ?= "gitsm://github.com/azure/iot-hub-device-update-delta"
 SRC_URI = "${ADU_DELTA_SRC_URI};branch=${ADU_DELTA_GIT_BRANCH} \
           file://0001-ADU-v1.0.0-Yocto-mininum-build.patch \
           file://0002-Add-root-CMakeLists.txt.patch \
           file://0003-Fix-io_utility-CMakeLists.txt.patch \
           file://0004-Add-missing-header-in-zstd_decompression_reader.patch \
+          file://0005-Add-missing-header-for-uint64_t.patch \
           "
 
 ADU_DELTA_GIT_COMMIT ?= "b581e92458f458969b427051a2ac5d18d3528dc6"
