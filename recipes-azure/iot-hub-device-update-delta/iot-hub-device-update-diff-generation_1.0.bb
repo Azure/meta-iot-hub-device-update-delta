@@ -21,6 +21,7 @@ ENABLE_TRIMMING = "false"
 # Override the default dependencies
 DEPENDS += "iot-hub-device-update-delta-processor"
 RDEPENDS:${PN} += "dotnet-core iot-hub-device-update-delta-processor"
+RDEPENDS:${PN} += "lttng-ust"
 
 # Override configure to handle our specific project structure
 do_configure() {
@@ -57,10 +58,32 @@ EOF
         sed -i 's/\$(SolutionDir)/\$(SolutionRoot)/g' src/managed/DiffGen/Directory.Build.props
     fi
     
+    # Add build properties to disable EventSource and tracing features that require LTTng
+    export DOTNET_CLI_TELEMETRY_OPTOUT=1
+    export DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
+    
     dotnet restore ${DOTNET_PROJECT}
 }
 
 do_configure[network] = "1"
+
+# Override compile to add build properties that disable EventSource/tracing
+do_compile() {
+    export HOME="${WORKDIR}"
+    export DOTNET_CLI_TELEMETRY_OPTOUT=1
+    export DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1
+    
+    cd ${S}
+    
+    # Build with properties to disable tracing features
+    dotnet build ${DOTNET_PROJECT} \
+        --configuration Release \
+        --output ${S}/src/out/managed/Release/DiffGenTool \
+        -p:EventSourceSupport=false \
+        -p:UseSystemResourceKeys=true \
+        -p:EnableEventSourceGenerator=false \
+        -p:EventSourceGeneration=false
+}
 
 # Override install to handle our custom output structure
 do_install() {
@@ -73,6 +96,16 @@ do_install() {
         bberror "DiffGenTool output directory not found"
         exit 1
     fi
+    
+    # Create a runtime configuration file to disable LTTng tracing
+    echo '{' > ${D}/${INSTALL_DIR}/DiffGenTool.runtimeconfig.json
+    echo '  "runtimeOptions": {' >> ${D}/${INSTALL_DIR}/DiffGenTool.runtimeconfig.json
+    echo '    "configProperties": {' >> ${D}/${INSTALL_DIR}/DiffGenTool.runtimeconfig.json
+    echo '      "System.Diagnostics.Tracing.EventSource.IsSupported": false,' >> ${D}/${INSTALL_DIR}/DiffGenTool.runtimeconfig.json
+    echo '      "Microsoft.Extensions.Logging.EventSource.IsSupported": false' >> ${D}/${INSTALL_DIR}/DiffGenTool.runtimeconfig.json
+    echo '    }' >> ${D}/${INSTALL_DIR}/DiffGenTool.runtimeconfig.json
+    echo '  }' >> ${D}/${INSTALL_DIR}/DiffGenTool.runtimeconfig.json
+    echo '}' >> ${D}/${INSTALL_DIR}/DiffGenTool.runtimeconfig.json
 }
 
 # Override install to create our custom wrapper

@@ -9,6 +9,7 @@ IMAGE_INSTALL:append = " \
     iot-hub-device-update-delta-processor \
     iot-hub-device-update-diff-generation \
     dotnet-core \
+    lttng-ust \
     "
 
 # Add some useful development tools
