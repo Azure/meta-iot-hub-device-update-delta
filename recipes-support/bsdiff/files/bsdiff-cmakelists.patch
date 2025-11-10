@@ -1,0 +1,47 @@
+From b8c69426ebf8a71c2e895db4b9b641c2705c4725 Mon Sep 17 00:00:00 2001
+From: Nox Wilairat <wewilair@microsoft.com>
+Date: Thu, 29 Sep 2022 17:56:18 +0000
+Subject: [PATCH] Modify CMakeLists.txt to: - build shared bsdiff library -
+ install bsdiff and bspatch app in the image - install divsufsort divsufsort64
+ in the image
+
+---
+ CMakeLists.txt | 23 +++++++++++++++++++++++
+ 1 file changed, 23 insertions(+)
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 6c8ce01..5797dbc 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -75,6 +75,29 @@ if (BUILD_STANDALONES)
+     target_link_libraries(bspatch_app PRIVATE bsdiff)
+ endif()
+ 
++# Install targets
++if (BUILD_STANDALONES)
++    install(TARGETS
++        bsdiff bsdiff_app bspatch_app divsufsort divsufsort64
++        RUNTIME DESTINATION bin
++        LIBRARY DESTINATION lib
++        ARCHIVE DESTINATION lib
++        )
++    # Install header
++    install(FILES include/bsdiff.h
++        DESTINATION include)
++else()
++    install(TARGETS
++        bsdiff divsufsort divsufsort64
++        RUNTIME DESTINATION bin
++        LIBRARY DESTINATION lib
++        ARCHIVE DESTINATION lib
++        )
++    # Install header
++    install(FILES include/bsdiff.h
++        DESTINATION include)
++endif()
++
+ if (BUILD_TESTING)
+     add_subdirectory(testdata)
+ endif()
+-- 
+2.17.1
