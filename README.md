@@ -40,6 +40,43 @@ The following system dependencies must be available in your Yocto build:
    - `pkgconfig`
    - C++20 capable compiler (GCC/Clang)
 
+## Package Manager Configuration
+
+### Recommended: OPKG (IPK packages)
+
+For optimal .NET runtime compatibility and embedded systems support, configure your build to use OPKG package manager:
+
+```bash
+# In conf/local.conf
+PACKAGE_CLASSES ?= "package_ipk"
+```
+
+**Benefits of OPKG:**
+- Better .NET dependency resolution (handles `lttng-ust` requirements)
+- Designed for embedded systems (smaller footprint)
+- More efficient dependency handling vs RPM/DNF
+- Used by OpenWrt and other embedded distributions
+
+### Alternative: RPM packages (Default)
+
+If you prefer RPM packages (default Poky behavior):
+
+```bash
+# In conf/local.conf  
+PACKAGE_CLASSES ?= "package_rpm"
+```
+
+**Note:** RPM/DNF may require additional configuration for .NET runtime dependencies.
+
+### .NET Runtime Dependencies
+
+The .NET components require LTTng (Linux Trace Toolkit) for runtime tracing:
+
+- **`lttng-ust`** - User Space Tracing library for .NET runtime
+- **`lttng-tools`** - LTTng command-line tools (optional for debugging)
+
+These are automatically included in recipes but may need manual installation if building individual components.
+
 ## Recipes Provided
 
 ### iot-hub-device-update-delta-processor
@@ -248,6 +285,24 @@ SRC_URI += "file://custom-fix.patch"
 #### 3. C++ Compilation Errors
 **Error:** Namespace conflicts with `algorithm`
 **Solution:** The current recipe includes namespace fixes. For complete resolution, additional source patches may be needed.
+
+#### 4. .NET Runtime LTTng Dependency Error
+**Error:** `nothing provides liblttng-ust.so.0()(64bit) needed by iot-hub-device-update-diff-generation`
+**Root Cause:** .NET runtime requires LTTng (Linux Trace Toolkit) for EventSource tracing
+**Solutions:**
+1. **Use OPKG package manager (Recommended):**
+   ```bash
+   # In conf/local.conf
+   PACKAGE_CLASSES ?= "package_ipk"
+   ```
+2. **Add LTTng to your image:**
+   ```bash
+   IMAGE_INSTALL:append = " lttng-ust lttng-tools"
+   ```
+3. **Verify LTTng availability:**
+   ```bash
+   bitbake-layers show-recipes "*lttng*"
+   ```
 
 ### Debug Information
 
