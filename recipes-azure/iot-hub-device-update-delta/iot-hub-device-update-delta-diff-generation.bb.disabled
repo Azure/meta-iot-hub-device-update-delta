@@ -20,7 +20,7 @@ ENABLE_TRIMMING = "false"
 
 # Override the default dependencies
 DEPENDS += "iot-hub-device-update-delta-processor"
-RDEPENDS:${PN} += "dotnet-core iot-hub-device-update-delta-processor"
+RDEPENDS:${PN} += "iot-hub-device-update-delta-processor"
 RDEPENDS:${PN} += "lttng-ust"
 
 # Override configure to handle our specific project structure
@@ -120,3 +120,5 @@ SCRIPT_EOF
 }
 
 FILES:${PN} += "${bindir}/*"
+# Skip QA checks for .NET runtime binaries (expected to be x86-64 for the diff generation tool)
+INSANE_SKIP:${PN} = "arch buildpaths"

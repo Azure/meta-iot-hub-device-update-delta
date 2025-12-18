@@ -5,24 +5,19 @@ LICENSE = "MIT"
 LIC_FILES_CHKSUM = "file://LICENSE;md5=d4a904ca135bb7bc912156fee12726f0"
 
 # Development mode: set to "1" to use local sources, "0" to use remote git
-USE_LOCAL_SOURCES ?= "1"
+USE_LOCAL_SOURCES ?= "0"
 
-# Local sources path (relative to TOPDIR)
-LOCAL_SOURCES_PATH = "${TOPDIR}/../sources/iot-hub-device-update-delta"
+# Conditional SRC_URI based on USE_LOCAL_SOURCES - use a known commit
+# Note: Patch not included in SRC_URI - applied manually in do_patch:prepend()
+SRC_URI = "git://github.com/Azure/iot-hub-device-update-delta.git;protocol=https;branch=user/nox-msft/scarthgap"
 
-# Conditional SRC_URI based on USE_LOCAL_SOURCES
-SRC_URI = "${@oe.utils.conditional('USE_LOCAL_SOURCES', '1', \
-               'file://${LOCAL_SOURCES_PATH}', \
-               'git://github.com/Azure/iot-hub-device-update-delta.git;protocol=https;branch=main \
-                file://0001-use-pkgconfig-for-zstd.patch', d)}"
+# Use the scarthgap branch commit (with fixes for algorithm rename and pkgconfig)
+SRCREV = "${AUTOREV}"
 
-# Only set SRCREV for git builds
-SRCREV = "${@oe.utils.conditional('USE_LOCAL_SOURCES', '1', '', 'AUTOREV', d)}"
+S = "${WORKDIR}/git"
+OECMAKE_SOURCEPATH = "${S}/src/native"
 
-# Set source directory based on build mode
-S = "${@oe.utils.conditional('USE_LOCAL_SOURCES', '1', '${WORKDIR}${LOCAL_SOURCES_PATH}', '${WORKDIR}/git', d)}"
-
-DEPENDS = "cmake-native ninja-native zlib zstd bzip2 libgcrypt fmt jsoncpp googletest bsdiff e2fsprogs libconfig"
+DEPENDS = "cmake-native ninja-native zlib zstd bzip2 libgcrypt fmt jsoncpp googletest bsdiff e2fsprogs libconfig openssl"
 
 # Runtime dependencies
 RDEPENDS:${PN} = "zlib zstd bzip2 libgcrypt fmt jsoncpp"
@@ -36,7 +31,11 @@ CXXFLAGS:append = " -std=c++17"
 EXTRA_OECMAKE = " \
     -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_TESTING=OFF \
+    -DCMAKE_PREFIX_PATH=${STAGING_DIR_TARGET}/usr \
 "
+
+# Set PKG_CONFIG_PATH for CMake to find pkgconfig files
+export PKG_CONFIG_PATH = "${STAGING_LIBDIR}/pkgconfig"
 
 # Set the source directory for CMake
 OECMAKE_SOURCEPATH = "${S}/src/native"
@@ -71,7 +70,7 @@ do_install:append() {
     install -m 0644 ${S}/README.md ${D}${prefix}/ms-adu_diffs/
 }
 
-FILES:${PN} = "${bindir}/* ${prefix}/ms-adu_diffs/*"
+FILES:${PN} = "${bindir}/* ${prefix}/ms-adu_diffs/* ${libdir}/*.so*"
 FILES:${PN}-dev = "${includedir}/*"
 FILES:${PN}-staticdev = "${libdir}/*.a"
 
