@@ -19,6 +19,10 @@ IMAGE_INSTALL:append = " \
     htop \
     strace \
     gdb \
+    python3 \
+    python3-modules \
+    bsdiff \
+    zstd \
     "
 
 # Set a reasonable image size

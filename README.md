@@ -29,54 +29,59 @@ This layer orchestrates a complete delta update build system that:
 ## System Architecture
 
 ```mermaid
+%%{init: {'theme':'base', 'themeVariables': {'background':'#f5f5f5', 'mainBkg':'#f5f5f5', 'clusterBkg':'#f5f5f5', 'clusterBorder':'#ddd'}}}%%
 graph TB
-    subgraph "Build System"
+    subgraph diagram[" "]
         BB[BitBake Build System]
         
-        subgraph "Base Image Recipe"
-            BASE[adu-base-image.bb<br/>Raspberry Pi 4 rootfs]
-        end
+        BASE[adu-base-image.bb<br/>Raspberry Pi 4 rootfs]
+        V1[adu-update-image-v1.bb<br/>Version 1.0.0]
+        V2[adu-update-image-v2.bb<br/>Version 1.0.1]
+        V3[adu-update-image-v3.bb<br/>Version 1.0.2]
+        INC[adu-update-image-common.inc<br/>Shared Configuration]
+        DELTA[adu-delta-image.bb<br/>Delta Processing]
         
-        subgraph "Versioned Update Images"
-            V1[adu-update-image-v1.bb<br/>Version 1.0.0]
-            V2[adu-update-image-v2.bb<br/>Version 1.0.1]
-            V3[adu-update-image-v3.bb<br/>Version 1.0.2]
-            INC[adu-update-image-common.inc<br/>Shared Configuration]
-        end
+        EXT4[adu-base-image.ext4.gz<br/>199 MB compressed rootfs]
+        SWU1[adu-update-image-v1.swu<br/>199 MB]
+        SWU2[adu-update-image-v2.swu<br/>199 MB]
+        SWU3[adu-update-image-v3.swu<br/>199 MB]
         
-        subgraph "Delta Generation"
-            DELTA[adu-delta-image.bb<br/>Delta Processing]
-        end
+        D12[adu-delta-v1-to-v2.diff<br/>~600 bytes]
+        D23[adu-delta-v2-to-v3.diff<br/>~600 bytes]
+        D13[adu-delta-v1-to-v3.diff<br/>~600 bytes]
+        
+        VERIFY1[Verify v1+delta=v2]
+        VERIFY2[Verify v2+delta=v3]
+        VERIFY3[Verify v1+delta=v3]
+        
+        DEPLOY[Deploy Directory<br/>/tmp/deploy/images/raspberrypi4-64/]
+        M12[delta-manifest<br/>v1.0.0-to-v2.0.0.json]
+        M23[delta-manifest<br/>v2.0.0-to-v3.0.0.json]
+        M13[delta-manifest<br/>v1.0.0-to-v3.0.0.json]
         
         BB --> BASE
         BB --> V1
         BB --> V2
         BB --> V3
-        V1 -.requires.-> INC
-        V2 -.requires.-> INC
-        V3 -.requires.-> INC
-        INC -.depends on.-> BASE
         BB --> DELTA
-    end
-    
-    subgraph "Build Process Flow"
-        BASE -->|do_image_complete| EXT4[adu-base-image.ext4.gz<br/>199 MB compressed rootfs]
         
-        EXT4 -->|swupdate class| SWU1[adu-update-image-v1.swu<br/>199 MB]
-        EXT4 -->|swupdate class| SWU2[adu-update-image-v2.swu<br/>199 MB]
-        EXT4 -->|swupdate class| SWU3[adu-update-image-v3.swu<br/>199 MB]
+        V1 -.-> INC
+        V2 -.-> INC
+        V3 -.-> INC
+        INC -.-> BASE
         
-        SWU1 -->|bsdiff| D12[adu-delta-v1-to-v2.diff<br/>~600 bytes]
-        SWU2 -->|bsdiff| D23[adu-delta-v2-to-v3.diff<br/>~600 bytes]
-        SWU1 -->|bsdiff| D13[adu-delta-v1-to-v3.diff<br/>~600 bytes]
+        BASE --> EXT4
+        EXT4 --> SWU1
+        EXT4 --> SWU2
+        EXT4 --> SWU3
         
-        D12 -->|round-trip test| VERIFY1[Verify v1 + delta = v2]
-        D23 -->|round-trip test| VERIFY2[Verify v2 + delta = v3]
-        D13 -->|round-trip test| VERIFY3[Verify v1 + delta = v3]
-    end
-    
-    subgraph "Deployment Directory"
-        DEPLOY[/tmp/deploy/images/raspberrypi4-64/]
+        SWU1 --> D12
+        SWU2 --> D23
+        SWU1 --> D13
+        
+        D12 --> VERIFY1
+        D23 --> VERIFY2
+        D13 --> VERIFY3
         
         EXT4 --> DEPLOY
         SWU1 --> DEPLOY
@@ -86,23 +91,28 @@ graph TB
         D23 --> DEPLOY
         D13 --> DEPLOY
         
-        DEPLOY --> M12[delta-manifest-v1.0.0-to-v2.0.0.json]
-        DEPLOY --> M23[delta-manifest-v2.0.0-to-v3.0.0.json]
-        DEPLOY --> M13[delta-manifest-v1.0.0-to-v3.0.0.json]
+        DEPLOY --> M12
+        DEPLOY --> M23
+        DEPLOY --> M13
     end
     
-    style BASE fill:#e1f5ff
-    style EXT4 fill:#fff3cd
-    style SWU1 fill:#d1ecf1
-    style SWU2 fill:#d1ecf1
-    style SWU3 fill:#d1ecf1
-    style D12 fill:#d4edda
-    style D23 fill:#d4edda
-    style D13 fill:#d4edda
-    style DEPLOY fill:#f8d7da
-    style VERIFY1 fill:#cce5ff
-    style VERIFY2 fill:#cce5ff
-    style VERIFY3 fill:#cce5ff
+    classDef buildRecipe fill:#2196F3,stroke:#1565C0,stroke-width:2px,color:#fff,rx:5,ry:5
+    classDef artifact fill:#FF9800,stroke:#E65100,stroke-width:2px,color:#fff,rx:5,ry:5
+    classDef swuFile fill:#00BCD4,stroke:#00838F,stroke-width:2px,color:#fff,rx:5,ry:5
+    classDef deltaFile fill:#4CAF50,stroke:#2E7D32,stroke-width:2px,color:#fff,rx:5,ry:5
+    classDef verify fill:#9C27B0,stroke:#6A1B9A,stroke-width:2px,color:#fff,rx:5,ry:5
+    classDef deploy fill:#F44336,stroke:#C62828,stroke-width:2px,color:#fff,rx:5,ry:5
+    classDef manifest fill:#607D8B,stroke:#37474F,stroke-width:2px,color:#fff,rx:5,ry:5
+    
+    class BB,BASE,V1,V2,V3,INC,DELTA buildRecipe
+    class EXT4 artifact
+    class SWU1,SWU2,SWU3 swuFile
+    class D12,D23,D13 deltaFile
+    class VERIFY1,VERIFY2,VERIFY3 verify
+    class DEPLOY deploy
+    class M12,M23,M13 manifest
+    
+    style diagram fill:#f5f5f5,stroke:#999,stroke-width:2px
 ```
 
 ### Architecture Components

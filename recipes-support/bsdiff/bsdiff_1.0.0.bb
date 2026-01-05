@@ -82,3 +82,6 @@ EOF
 FILES:${PN} += "${bindir}/bsdiff ${bindir}/bspatch ${bindir}/bsdiff.LICENSE"
 FILES:${PN}-dev += "${libdir}/libbsdiff.a ${includedir}/bsdiff.h ${libdir}/pkgconfig/bsdiff.pc"
 FILES:${PN}-staticdev += "${libdir}/libdivsufsort.a ${libdir}/libdivsufsort64.a"
+
+# Allow building as native package for use during builds
+BBCLASSEXTEND = "native nativesdk"
