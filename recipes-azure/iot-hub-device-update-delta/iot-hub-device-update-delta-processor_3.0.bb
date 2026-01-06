@@ -46,9 +46,9 @@ do_install:append() {
     install -d ${D}${libdir}
     install -m 0644 ${B}/bin/libadudiffapi.a ${D}${libdir}/
     
-    # Install headers
-    install -d ${D}${includedir}/azure-delta
-    cp -r ${S}/src/native/diffs/api/*.h ${D}${includedir}/azure-delta/
+    # Install headers directly to include directory (FindAzureIotHubDeviceUpdateDelta.cmake expects them here)
+    install -d ${D}${includedir}
+    cp -r ${S}/src/native/diffs/api/*.h ${D}${includedir}/
     
     # Install tools (excluding dumpextfs due to ext2fs API compatibility issues)
     install -d ${D}${bindir}
