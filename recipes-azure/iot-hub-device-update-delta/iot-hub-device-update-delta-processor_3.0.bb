@@ -31,7 +31,10 @@ CXXFLAGS:append = " -std=c++17"
 EXTRA_OECMAKE = " \
     -DCMAKE_BUILD_TYPE=Release \
     -DBUILD_TESTING=OFF \
+    -DBUILD_SHARED_LIBS=ON \
     -DCMAKE_PREFIX_PATH=${STAGING_DIR_TARGET}/usr \
+    -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=${B}/bin \
+    -DCMAKE_LIBRARY_OUTPUT_DIRECTORY=${B}/lib \
 "
 
 # Set PKG_CONFIG_PATH for CMake to find pkgconfig files
@@ -40,11 +43,26 @@ export PKG_CONFIG_PATH = "${STAGING_LIBDIR}/pkgconfig"
 # Set the source directory for CMake
 OECMAKE_SOURCEPATH = "${S}/src/native"
 
+# Skip gtest subdirectories since we're not building tests
+do_configure:prepend() {
+    # Comment out all gtest subdirectories in CMakeLists.txt
+    sed -i 's|^add_subdirectory(.*gtest)|#&|g' ${S}/src/native/CMakeLists.txt
+}
+
 # Install only the delta processor components
 do_install:append() {
-    # Install static libraries
+    # Install libraries (both shared and static)
     install -d ${D}${libdir}
-    install -m 0644 ${B}/bin/libadudiffapi.a ${D}${libdir}/
+    
+    # Install shared library
+    if [ -f ${B}/lib/libadudiffapi.so ]; then
+        install -m 0755 ${B}/lib/libadudiffapi.so ${D}${libdir}/
+    fi
+    
+    # Install static library
+    if [ -f ${B}/lib/libadudiffapi.a ]; then
+        install -m 0644 ${B}/lib/libadudiffapi.a ${D}${libdir}/
+    fi
     
     # Install headers directly to include directory (FindAzureIotHubDeviceUpdateDelta.cmake expects them here)
     install -d ${D}${includedir}
@@ -52,9 +70,6 @@ do_install:append() {
     
     # Install tools (excluding dumpextfs due to ext2fs API compatibility issues)
     install -d ${D}${bindir}
-    # Install static library
-    install -d ${D}${libdir}
-    install -m 0644 ${B}/bin/libadudiffapi.a ${D}${libdir}/
     
     # Install all executables from build bin directory
     install -m 0755 ${B}/bin/applydiff ${D}${bindir}/
