@@ -68,12 +68,13 @@ do_install:append() {
     install -d ${D}${includedir}
     cp -r ${S}/src/native/diffs/api/*.h ${D}${includedir}/
     
-    # Install tools (excluding dumpextfs due to ext2fs API compatibility issues)
+    # Install tools
     install -d ${D}${bindir}
     
     # Install all executables from build bin directory
     install -m 0755 ${B}/bin/applydiff ${D}${bindir}/
     install -m 0755 ${B}/bin/dumpdiff ${D}${bindir}/
+    install -m 0755 ${B}/bin/dumpextfs ${D}${bindir}/
     install -m 0755 ${B}/bin/extract ${D}${bindir}/
     install -m 0755 ${B}/bin/makecpio ${D}${bindir}/
     install -m 0755 ${B}/bin/recompress ${D}${bindir}/

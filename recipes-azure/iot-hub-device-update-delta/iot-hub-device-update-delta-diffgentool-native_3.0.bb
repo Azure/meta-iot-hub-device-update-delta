@@ -7,8 +7,15 @@ LIC_FILES_CHKSUM = "file://LICENSE;md5=d4a904ca135bb7bc912156fee12726f0"
 # Inherit native to build for build host (x86_64)
 inherit native
 
-# Reuse source configuration from processor recipe
-require iot-hub-device-update-delta-processor_${PV}.bb
+# Source configuration - use same as processor recipe
+SRC_URI = "git://github.com/Azure/iot-hub-device-update-delta.git;protocol=https;branch=user/nox-msft/scarthgap"
+SRCREV = "${AUTOREV}"
+
+S = "${WORKDIR}/git"
+B = "${WORKDIR}/build"
+
+# Runtime dependencies - none for native recipe
+RDEPENDS:${PN} = ""
 
 # Override NuGet.config to use public nuget.org instead of private Microsoft feed
 python do_patch:append() {
@@ -70,29 +77,123 @@ do_compile() {
     export DOTNET_CLI_HOME="${HOME}"
     
     # Restore NuGet packages (now using public nuget.org)
+    # Disable NuGetAudit to avoid network errors in BitBake sandbox (NU1900)
     /usr/bin/dotnet restore tools/DiffGenTool/DiffGenTool.csproj \
         --configfile ${S}/NuGet.config \
+        -p:NuGetAudit=false \
         || bbfatal "dotnet restore failed"
     
     # Publish as self-contained Linux x64 executable
+    # Disable NuGetAudit to avoid network errors in BitBake sandbox (NU1900)
+    # Suppress IL3000 warning about Assembly.Location in single-file apps
+    # Disable StyleCop analyzers completely - code style not critical for build
     /usr/bin/dotnet publish tools/DiffGenTool/DiffGenTool.csproj \
         -c Release \
         -r linux-x64 \
         --self-contained true \
         -p:PublishSingleFile=true \
         -p:IncludeNativeLibrariesForSelfExtract=true \
-        -p:WarningsAsErrors="" \
+        -p:NuGetAudit=false \
+        -p:EnableTrimAnalyzer=false \
+        -p:EnableAnalyzers=false \
+        -p:RunAnalyzersDuringBuild=false \
+        -p:RunAnalyzersDuringLiveAnalysis=false \
+        -p:EnforceCodeStyleInBuild=false \
+        -p:TreatWarningsAsErrors=false \
+        -p:WarningsAsErrors= \
         -o ${B}/diffgentool-output \
         || bbfatal "dotnet publish failed"
 }
 
-# Install the DiffGenTool binary
+# Install the DiffGenTool binary and create a wrapper script
 do_install() {
     install -d ${D}${bindir}
-    install -m 0755 ${B}/diffgentool-output/DiffGenTool ${D}${bindir}/diffgentool
+    install -d ${D}${libdir}
+    
+    # Install the actual DiffGenTool binary with a different name
+    install -m 0755 ${B}/diffgentool-output/DiffGenTool ${D}${bindir}/diffgentool.bin
+    
+    # Install/symlink required libraries to ${D}${libdir} so they're in LD_LIBRARY_PATH
+    # This allows diffgentool.bin --help to work, which is needed to detect the .NET extraction directory
+    
+    # Find and install jsoncpp library
+    JSONCPP_LIB=$(find ${RECIPE_SYSROOT_NATIVE} -name "libjsoncpp.so.25" 2>/dev/null | head -1)
+    if [ -n "$JSONCPP_LIB" ]; then
+        install -m 0755 "$JSONCPP_LIB" ${D}${libdir}/
+        bbnote "Installed libjsoncpp.so.25 to ${D}${libdir}"
+    else
+        bbwarn "Could not find libjsoncpp.so.25 in sysroot"
+    fi
+    
+    # Find jsoncpp and processor library directories for wrapper script
+    JSONCPP_LIBDIR=$(find ${RECIPE_SYSROOT_NATIVE} -type d -path "*/jsoncpp-native/usr/lib" 2>/dev/null | head -1)
+    [ -z "$JSONCPP_LIBDIR" ] && JSONCPP_LIBDIR="\${SCRIPT_DIR}/../lib"
+    
+    # Find processor library path at build time
+    PROCESSOR_LIBDIR=$(find ${RECIPE_SYSROOT_NATIVE} -type d -path "*/iot-hub-device-update-delta-processor-native/usr/lib" 2>/dev/null | head -1)
+    [ -z "$PROCESSOR_LIBDIR" ] && PROCESSOR_LIBDIR="\${SCRIPT_DIR}/../lib"
+    
+    # Create wrapper script with hardcoded library paths
+    cat > ${D}${bindir}/diffgentool <<EOF
+#!/bin/bash
+# Wrapper script for DiffGenTool that sets up required helper binaries
+
+# Set up library path with hardcoded paths from build time
+SCRIPT_DIR="\$( cd "\$( dirname "\${BASH_SOURCE[0]}" )" && pwd )"
+export LD_LIBRARY_PATH="${PROCESSOR_LIBDIR}:${JSONCPP_LIBDIR}:\${LD_LIBRARY_PATH}"
+
+# Detect the .NET extraction directory by running DiffGenTool briefly
+RUNNING_DIR=\$("\${SCRIPT_DIR}/diffgentool.bin" --help 2>&1 | grep "Running Directory:" | awk '{print \$3}')
+
+if [ -n "\$RUNNING_DIR" ] && [ -d "\$RUNNING_DIR" ]; then
+    # Symlink helper binaries into .NET extraction directory if they don't exist
+    if [ ! -e "\$RUNNING_DIR/bsdiff" ]; then
+        ln -sf \$(which bsdiff) "\$RUNNING_DIR/bsdiff" 2>/dev/null || true
+    fi
+    if [ ! -e "\$RUNNING_DIR/zstd_compress_file" ]; then
+        ln -sf \$(which zstd_compress_file) "\$RUNNING_DIR/zstd_compress_file" 2>/dev/null || true
+    fi
+    if [ ! -e "\$RUNNING_DIR/libadudiffapi.so" ]; then
+        # Find libadudiffapi.so in LD_LIBRARY_PATH or standard locations
+        for dir in \${LD_LIBRARY_PATH//:/ } /usr/lib /usr/local/lib; do
+            if [ -f "\$dir/libadudiffapi.so" ]; then
+                ln -sf "\$dir/libadudiffapi.so" "\$RUNNING_DIR/libadudiffapi.so"
+                break
+            fi
+        done
+    fi
+    if [ ! -e "\$RUNNING_DIR/dumpextfs" ]; then
+        ln -sf \$(which dumpextfs) "\$RUNNING_DIR/dumpextfs" 2>/dev/null || true
+    fi
+    if [ ! -e "\$RUNNING_DIR/libjsoncpp.so.25" ]; then
+        # Find libjsoncpp.so.25 for libadudiffapi.so transitive dependency
+        for dir in \${LD_LIBRARY_PATH//:/ } /usr/lib /usr/local/lib; do
+            if [ -f "\$dir/libjsoncpp.so.25" ]; then
+                ln -sf "\$dir/libjsoncpp.so.25" "\$RUNNING_DIR/libjsoncpp.so.25"
+                break
+            fi
+        done
+    fi
+    if [ ! -e "\$RUNNING_DIR/libzstd_compress_file.so" ]; then
+        # Find libzstd_compress_file.so if it exists
+        for dir in \${LD_LIBRARY_PATH//:/ } /usr/lib /usr/local/lib; do
+            if [ -f "\$dir/libzstd_compress_file.so" ]; then
+                ln -sf "\$dir/libzstd_compress_file.so" "\$RUNNING_DIR/libzstd_compress_file.so"
+                break
+            fi
+        done
+    fi
+fi
+
+# Execute the real DiffGenTool with all arguments
+exec "\${SCRIPT_DIR}/diffgentool.bin" "\$@"
+EOF
+    chmod +x ${D}${bindir}/diffgentool
+    
+    bbnote "Installed DiffGenTool wrapper to ${D}${bindir}/diffgentool"
 }
 
-FILES:${PN} = "${bindir}/diffgentool"
+FILES:${PN} = "${bindir}/diffgentool ${bindir}/diffgentool.bin"
 
 # Skip QA checks for .NET binary
 INSANE_SKIP:${PN} = "already-stripped ldflags"
