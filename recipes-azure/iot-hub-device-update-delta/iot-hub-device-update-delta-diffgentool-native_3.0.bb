@@ -17,10 +17,48 @@ B = "${WORKDIR}/build"
 # Runtime dependencies - none for native recipe
 RDEPENDS:${PN} = ""
 
-# Override NuGet.config to use public nuget.org instead of private Microsoft feed
+# Configure NuGet package source
+# Priority: NUGET_CONFIG_PATH (file) > NUGET_SOURCE (variable) > nuget.org (default)
 python do_patch:append() {
-    # Replace NuGet.config with public nuget.org feed
-    nuget_config = """<?xml version="1.0" encoding="utf-8"?>
+    import os
+    import shutil
+
+    s_dir = d.getVar('S')
+    nuget_config_path = d.getVar('NUGET_CONFIG_PATH')
+    nuget_source = d.getVar('NUGET_SOURCE')
+
+    # Option 1: Use centralized NuGet.config from NUGET_CONFIG_PATH (pipeline builds)
+    if nuget_config_path and os.path.exists(nuget_config_path):
+        bb.note(f"Using centralized NuGet.config from: {nuget_config_path}")
+        shutil.copy(nuget_config_path, os.path.join(s_dir, 'NuGet.config'))
+    # Option 2: Generate config based on NUGET_SOURCE variable (local builds)
+    elif nuget_source:
+        if nuget_source == 'microsoft-internal':
+            bb.note("Using Microsoft internal NuGet feed (ADU-Diffs)")
+            nuget_config = """<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <packageSources>
+    <clear />
+    <add key="ADU-Diffs" value="https://microsoft.pkgs.visualstudio.com/OS.Fun/_packaging/ADU-Diffs/nuget/v3/index.json" />
+  </packageSources>
+</configuration>
+"""
+        else:
+            bb.note(f"Using NuGet source: {nuget_source}")
+            nuget_config = f"""<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <packageSources>
+    <clear />
+    <add key="custom" value="{nuget_source}" protocolVersion="3" />
+  </packageSources>
+</configuration>
+"""
+        with open(os.path.join(s_dir, 'NuGet.config'), 'w') as f:
+            f.write(nuget_config)
+    # Option 3: Default to public nuget.org
+    else:
+        bb.note("Using default public nuget.org feed")
+        nuget_config = """<?xml version="1.0" encoding="utf-8"?>
 <configuration>
   <packageSources>
     <clear />
@@ -28,23 +66,21 @@ python do_patch:append() {
   </packageSources>
 </configuration>
 """
-    import os
-    s_dir = d.getVar('S')
-    with open(os.path.join(s_dir, 'NuGet.config'), 'w') as f:
-        f.write(nuget_config)
-    
+        with open(os.path.join(s_dir, 'NuGet.config'), 'w') as f:
+            f.write(nuget_config)
+
     # Remove the PostBuild native library copy step that requires C++ builds
     # The C# DiffGenTool doesn't actually need these native libs
     csproj_path = os.path.join(s_dir, 'src/managed/DiffGen/tools/DiffGenTool/DiffGenTool.csproj')
     with open(csproj_path, 'r') as f:
         csproj_content = f.read()
-    
+
     # Remove the PostBuild target that tries to copy native binaries
     csproj_content = csproj_content.replace(
         '<Target Name="PostBuild" AfterTargets="PostBuildEvent">\n    <Copy SourceFiles="@(NativeBinaries)" DestinationFolder="$(OutputPath)" />\n  </Target>',
         '<!-- PostBuild native copy disabled for Yocto build -->'
     )
-    
+
     with open(csproj_path, 'w') as f:
         f.write(csproj_content)
 }
@@ -71,18 +107,18 @@ do_configure() {
 # Build the C# DiffGenTool using dotnet
 do_compile() {
     cd ${S}/src/managed/DiffGen
-    
+
     # Use the user's NuGet cache to avoid re-downloading packages
     export NUGET_PACKAGES="${HOME}/.nuget/packages"
     export DOTNET_CLI_HOME="${HOME}"
-    
+
     # Restore NuGet packages (now using public nuget.org)
     # Disable NuGetAudit to avoid network errors in BitBake sandbox (NU1900)
     /usr/bin/dotnet restore tools/DiffGenTool/DiffGenTool.csproj \
         --configfile ${S}/NuGet.config \
         -p:NuGetAudit=false \
         || bbfatal "dotnet restore failed"
-    
+
     # Publish as self-contained Linux x64 executable
     # Disable NuGetAudit to avoid network errors in BitBake sandbox (NU1900)
     # Suppress IL3000 warning about Assembly.Location in single-file apps
@@ -109,13 +145,13 @@ do_compile() {
 do_install() {
     install -d ${D}${bindir}
     install -d ${D}${libdir}
-    
+
     # Install the actual DiffGenTool binary with a different name
     install -m 0755 ${B}/diffgentool-output/DiffGenTool ${D}${bindir}/diffgentool.bin
-    
+
     # Install/symlink required libraries to ${D}${libdir} so they're in LD_LIBRARY_PATH
     # This allows diffgentool.bin --help to work, which is needed to detect the .NET extraction directory
-    
+
     # Find and install jsoncpp library
     JSONCPP_LIB=$(find ${RECIPE_SYSROOT_NATIVE} -name "libjsoncpp.so.25" 2>/dev/null | head -1)
     if [ -n "$JSONCPP_LIB" ]; then
@@ -124,15 +160,15 @@ do_install() {
     else
         bbwarn "Could not find libjsoncpp.so.25 in sysroot"
     fi
-    
+
     # Find jsoncpp and processor library directories for wrapper script
     JSONCPP_LIBDIR=$(find ${RECIPE_SYSROOT_NATIVE} -type d -path "*/jsoncpp-native/usr/lib" 2>/dev/null | head -1)
     [ -z "$JSONCPP_LIBDIR" ] && JSONCPP_LIBDIR="\${SCRIPT_DIR}/../lib"
-    
+
     # Find processor library path at build time
     PROCESSOR_LIBDIR=$(find ${RECIPE_SYSROOT_NATIVE} -type d -path "*/iot-hub-device-update-delta-processor-native/usr/lib" 2>/dev/null | head -1)
     [ -z "$PROCESSOR_LIBDIR" ] && PROCESSOR_LIBDIR="\${SCRIPT_DIR}/../lib"
-    
+
     # Create wrapper script with hardcoded library paths
     cat > ${D}${bindir}/diffgentool <<EOF
 #!/bin/bash
@@ -189,7 +225,7 @@ fi
 exec "\${SCRIPT_DIR}/diffgentool.bin" "\$@"
 EOF
     chmod +x ${D}${bindir}/diffgentool
-    
+
     bbnote "Installed DiffGenTool wrapper to ${D}${bindir}/diffgentool"
 }
 
