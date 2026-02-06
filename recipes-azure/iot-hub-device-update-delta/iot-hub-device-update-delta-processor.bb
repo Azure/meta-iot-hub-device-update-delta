@@ -16,7 +16,14 @@ SRCREV = "${AUTOREV}"
 S = "${WORKDIR}/git"
 OECMAKE_SOURCEPATH = "${S}/src/native"
 
-DEPENDS = "cmake-native ninja-native zlib zstd bzip2 libgcrypt fmt jsoncpp googletest bsdiff e2fsprogs libconfig openssl"
+# Build testing: set to "1" to enable unit tests, "0" to disable (default)
+BUILD_TESTING ?= "0"
+
+# Base dependencies
+DEPENDS = "cmake-native ninja-native zlib zstd bzip2 libgcrypt fmt jsoncpp bsdiff e2fsprogs libconfig openssl"
+
+# Add googletest when testing is enabled
+DEPENDS += "${@'googletest' if d.getVar('BUILD_TESTING') == '1' else ''}"
 
 # Runtime dependencies
 RDEPENDS:${PN} = "zlib zstd bzip2 libgcrypt fmt jsoncpp"
@@ -26,10 +33,10 @@ inherit cmake pkgconfig
 # Set C++ standard
 CXXFLAGS:append = " -std=c++17"
 
-# CMake configuration
+# CMake configuration - BUILD_TESTING controlled by recipe variable
 EXTRA_OECMAKE = " \
     -DCMAKE_BUILD_TYPE=Release \
-    -DBUILD_TESTING=OFF \
+    -DBUILD_TESTING=${@'ON' if d.getVar('BUILD_TESTING') == '1' else 'OFF'} \
     -DCMAKE_PREFIX_PATH=${STAGING_DIR_TARGET}/usr \
     -DCMAKE_SHARED_LINKER_FLAGS='-Wl,--allow-shlib-undefined' \
 "

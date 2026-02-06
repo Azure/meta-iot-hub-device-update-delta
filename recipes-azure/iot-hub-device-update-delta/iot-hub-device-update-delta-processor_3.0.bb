@@ -7,6 +7,9 @@ LIC_FILES_CHKSUM = "file://LICENSE;md5=d4a904ca135bb7bc912156fee12726f0"
 # Development mode: set to "1" to use local sources, "0" to use remote git
 USE_LOCAL_SOURCES ?= "0"
 
+# Build testing: set to "1" to enable unit tests, "0" to disable (default)
+BUILD_TESTING ?= "0"
+
 # Conditional SRC_URI based on USE_LOCAL_SOURCES - use a known commit
 # Note: Patch not included in SRC_URI - applied manually in do_patch:prepend()
 SRC_URI = "git://github.com/Azure/iot-hub-device-update-delta.git;protocol=https;branch=user/nox-msft/scarthgap"
@@ -17,7 +20,11 @@ SRCREV = "${AUTOREV}"
 S = "${WORKDIR}/git"
 OECMAKE_SOURCEPATH = "${S}/src/native"
 
-DEPENDS = "cmake-native ninja-native zlib zstd bzip2 libgcrypt fmt jsoncpp googletest bsdiff e2fsprogs libconfig openssl"
+# Base dependencies
+DEPENDS = "cmake-native ninja-native zlib zstd bzip2 libgcrypt fmt jsoncpp bsdiff e2fsprogs libconfig openssl"
+
+# Add googletest when testing is enabled
+DEPENDS += "${@'googletest' if d.getVar('BUILD_TESTING') == '1' else ''}"
 
 # Runtime dependencies
 RDEPENDS:${PN} = "zlib zstd bzip2 libgcrypt fmt jsoncpp"
@@ -27,10 +34,10 @@ inherit cmake pkgconfig
 # Set C++ standard
 CXXFLAGS:append = " -std=c++17"
 
-# CMake configuration
+# CMake configuration - BUILD_TESTING controlled by recipe variable
 EXTRA_OECMAKE = " \
     -DCMAKE_BUILD_TYPE=Release \
-    -DBUILD_TESTING=OFF \
+    -DBUILD_TESTING=${@'ON' if d.getVar('BUILD_TESTING') == '1' else 'OFF'} \
     -DBUILD_SHARED_LIBS=ON \
     -DCMAKE_PREFIX_PATH=${STAGING_DIR_TARGET}/usr \
     -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=${B}/bin \
@@ -43,10 +50,12 @@ export PKG_CONFIG_PATH = "${STAGING_LIBDIR}/pkgconfig"
 # Set the source directory for CMake
 OECMAKE_SOURCEPATH = "${S}/src/native"
 
-# Skip gtest subdirectories since we're not building tests
+# Skip gtest subdirectories only when not building tests
 do_configure:prepend() {
-    # Comment out all gtest subdirectories in CMakeLists.txt
-    sed -i 's|^add_subdirectory(.*gtest)|#&|g' ${S}/src/native/CMakeLists.txt
+    if [ "${BUILD_TESTING}" != "1" ]; then
+        # Comment out all gtest subdirectories in CMakeLists.txt
+        sed -i 's|^add_subdirectory(.*gtest)|#&|g' ${S}/src/native/CMakeLists.txt
+    fi
 }
 
 # Install only the delta processor components
