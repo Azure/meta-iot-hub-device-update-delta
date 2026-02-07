@@ -43,8 +43,18 @@ python do_patch:append() {
   </packageSources>
 </configuration>
 """
+        elif nuget_source == 'nuget-org':
+            bb.note("Using public nuget.org feed")
+            nuget_config = """<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <packageSources>
+    <clear />
+    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" protocolVersion="3" />
+  </packageSources>
+</configuration>
+"""
         else:
-            bb.note(f"Using NuGet source: {nuget_source}")
+            bb.note(f"Using custom NuGet source: {nuget_source}")
             nuget_config = f"""<?xml version="1.0" encoding="utf-8"?>
 <configuration>
   <packageSources>
@@ -84,6 +94,10 @@ python do_patch:append() {
     with open(csproj_path, 'w') as f:
         f.write(csproj_content)
 }
+
+# Enable network access for do_compile since dotnet restore needs to download NuGet packages
+# This is required when the NuGet cache is empty or packages need to be updated
+do_compile[network] = "1"
 
 # Check for .NET SDK at runtime
 python() {
