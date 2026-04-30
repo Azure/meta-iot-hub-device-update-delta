@@ -12,7 +12,7 @@ BUILD_TESTING ?= "0"
 
 # Conditional SRC_URI based on USE_LOCAL_SOURCES - use a known commit
 # Note: Patch not included in SRC_URI - applied manually in do_patch:prepend()
-SRC_URI = "git://github.com/Azure/iot-hub-device-update-delta.git;protocol=https;branch=user/nox-msft/scarthgap"
+SRC_URI = "${ADU_DELTA_SRC_URI};protocol=https;branch=${ADU_DELTA_GIT_BRANCH}"
 
 # Use the scarthgap branch commit (with fixes for algorithm rename and pkgconfig)
 SRCREV = "${AUTOREV}"

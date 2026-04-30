@@ -8,7 +8,7 @@ LIC_FILES_CHKSUM = "file://LICENSE;md5=d4a904ca135bb7bc912156fee12726f0"
 inherit native
 
 # Source configuration - use same as processor recipe
-SRC_URI = "git://github.com/Azure/iot-hub-device-update-delta.git;protocol=https;branch=user/nox-msft/scarthgap"
+SRC_URI = "${ADU_DELTA_SRC_URI};protocol=https;branch=${ADU_DELTA_GIT_BRANCH}"
 SRCREV = "${AUTOREV}"
 
 S = "${WORKDIR}/git"

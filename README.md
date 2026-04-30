@@ -28,6 +28,12 @@ This layer provides BitBake recipes to build the [iot-hub-device-update-delta](h
 - [Configuration Variables](#configuration-variables)
 - [Troubleshooting](#troubleshooting)
 
+### Additional Documentation
+
+- **[Delta Update Workflow Guide](docs/delta-update-workflow.md)** — End-to-end guide
+  for generating and applying delta updates, including why recompression is required,
+  tool inventory, best practices, and ADU agent integration.
+
 ## Prerequisites
 
 **Yocto Version:** Scarthgap (5.0)
