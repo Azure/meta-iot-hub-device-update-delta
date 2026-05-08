@@ -422,7 +422,7 @@ meta-iot-hub-device-update-delta/
 
 - **[meta-azure-device-update-samples](../meta-azure-device-update-samples/)** - Complete delta update workflow examples with SWUpdate integration
 - **[meta-azure-device-update](../meta-azure-device-update/)** - Azure Device Update client recipes
-- **[meta-raspberrypi-adu](../meta-raspberrypi-adu/)** - Raspberry Pi A/B update architecture
+- **[meta-azure-device-update-bsp](../meta-azure-device-update-bsp/)** - Consolidated BSP layer with A/B update architecture for all boards
 
 ## License
 
