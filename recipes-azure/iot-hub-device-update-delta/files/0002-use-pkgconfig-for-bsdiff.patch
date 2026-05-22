@@ -1,0 +1,30 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Yocto Build <build@yoctoproject.org>
+Date: Thu, 12 Dec 2024 00:00:00 +0000
+Subject: [PATCH] Use PkgConfig to find bsdiff for Yocto builds
+
+Yocto's bsdiff package doesn't provide CMake config files, so use
+pkg-config instead to locate the library.
+
+Upstream-Status: Inappropriate [Yocto-specific]
+Signed-off-by: Yocto Build <build@yoctoproject.org>
+---
+ src/native/io/compressed/CMakeLists.txt | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/src/native/io/compressed/CMakeLists.txt b/src/native/io/compressed/CMakeLists.txt
+index 1111111..2222222 100644
+--- a/src/native/io/compressed/CMakeLists.txt
++++ b/src/native/io/compressed/CMakeLists.txt
+@@ -37,7 +37,8 @@ target_link_libraries(io_compressed PUBLIC zstd::libzstd_shared)
+ target_link_libraries(io_compressed PRIVATE ZLIB::ZLIB)
+ endif()
+ 
+-find_package(bsdiff REQUIRED)
++# Use PkgConfig to find bsdiff since it doesn't provide CMake config in Yocto
++pkg_check_modules(BSDIFF REQUIRED bsdiff)
+ target_include_directories(io_compressed PRIVATE ${BSDIFF_INCLUDE_DIRS})
+ target_link_libraries(io_compressed PRIVATE ${BSDIFF_LIBRARIES})
+ 
+-- 
+2.39.0

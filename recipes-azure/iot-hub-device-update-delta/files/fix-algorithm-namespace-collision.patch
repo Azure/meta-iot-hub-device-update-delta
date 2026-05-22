@@ -1,0 +1,225 @@
+From: Yocto Build System <build@yoctoproject.org>
+Date: Tue, 5 Nov 2025 12:00:00 +0000
+Subject: [PATCH] Fix namespace collision between algorithm enum and STL algorithm header
+
+The project defines an enum named "algorithm" which conflicts with the C++ STL <algorithm> header.
+This patch renames the enum to "hash_algorithm" throughout the codebase to resolve the conflict.
+
+Signed-off-by: Yocto Build System <build@yoctoproject.org>
+
+--- a/src/native/hashing/algorithm.h
++++ b/src/native/hashing/algorithm.h
+@@ -20,7 +20,7 @@
+ 
+ namespace archive_diff::hashing
+ {
+-enum class algorithm : uint32_t
++enum class hash_algorithm : uint32_t
+ {
+ 	invalid = 0,
+ 	md5     = 32771,
+@@ -28,14 +28,14 @@
+ };
+ 
+-const algorithm all_algorithms[] = {algorithm::md5, algorithm::sha256};
++const hash_algorithm all_algorithms[] = {hash_algorithm::md5, hash_algorithm::sha256};
+ 
+ #ifndef USE_BCRYPT
+-int alg_to_gcrypt_algo(hashing::algorithm alg);
++int alg_to_gcrypt_algo(hashing::hash_algorithm alg);
+ #endif
+ 
+-std::string get_algorithm_name(algorithm algo);
++std::string get_algorithm_name(hash_algorithm algo);
+ 
+-size_t get_byte_count_for_algorithm(algorithm algo);
++size_t get_byte_count_for_algorithm(hash_algorithm algo);
+ } // namespace archive_diff::hashing
+--- a/src/native/hashing/algorithm.cpp
++++ b/src/native/hashing/algorithm.cpp
+@@ -13,9 +13,9 @@
+ 
+ namespace archive_diff::hashing
+ {
+-size_t get_byte_count_for_algorithm(algorithm algo)
++size_t get_byte_count_for_algorithm(hash_algorithm algo)
+ {
+ 	switch (algo)
+ 	{
+-	case algorithm::md5:
++	case hash_algorithm::md5:
+ 		return 16;
+-	case algorithm::sha256:
++	case hash_algorithm::sha256:
+ 		return 32;
+ 	default:
+@@ -28,9 +28,9 @@
+ 	}
+ }
+ 
+-std::string get_algorithm_name(algorithm algo)
++std::string get_algorithm_name(hash_algorithm algo)
+ {
+ 	switch (algo)
+ 	{
+-	case algorithm::md5:
++	case hash_algorithm::md5:
+ 		return "md5";
+-	case algorithm::sha256:
++	case hash_algorithm::sha256:
+ 		return "sha256";
+ 	default:
+@@ -44,9 +44,9 @@
+ #ifndef USE_BCRYPT
+ #ifdef USE_LIBGCRYPT
+ 
+-int alg_to_gcrypt_algo(algorithm alg)
++int alg_to_gcrypt_algo(hash_algorithm alg)
+ {
+ 	switch (alg)
+ 	{
+-	case algorithm::md5:
++	case hash_algorithm::md5:
+ 		return GCRY_MD_MD5;
+-	case algorithm::sha256:
++	case hash_algorithm::sha256:
+ 		return GCRY_MD_SHA256;
+ 	default:
+@@ -60,9 +60,9 @@
+ #endif
+ #endif
+--- a/src/native/hashing/hash.h
++++ b/src/native/hashing/hash.h
+@@ -28,8 +28,8 @@
+ struct hash
+ {
+ 	hash() : m_algorithm(hash_algorithm::invalid) {}
+-	hash(algorithm algo, io::reader &reader);
++	hash(hash_algorithm algo, io::reader &reader);
+ 
+-	static hash import_hash_value(algorithm algo, std::string_view hash_value)
++	static hash import_hash_value(hash_algorithm algo, std::string_view hash_value)
+ 	{
+ 		hash new_hash;
+ 		new_hash.m_algorithm = algo;
+@@ -76,7 +76,7 @@
+ 	static void verify_hashes_match(std::string_view actual, std::string_view expected);
+ 	static void verify_data_against_hash(std::string_view data, const hash &hash);
+ 
+-	algorithm m_algorithm{algorithm::invalid};
++	hash_algorithm m_algorithm{hash_algorithm::invalid};
+ 	std::vector<char> m_hash_data;
+ 
+ 	std::string get_type_string() const;
+--- a/src/native/hashing/hash.cpp
++++ b/src/native/hashing/hash.cpp
+@@ -15,10 +15,10 @@
+ 
+ namespace archive_diff::hashing
+ {
+-hash::hash(algorithm algorithm, io::reader &reader) : m_algorithm(algorithm)
++hash::hash(hash_algorithm algorithm, io::reader &reader) : m_algorithm(algorithm)
+ {
+-	hashing::hasher hasher{hashing::algorithm::sha256};
++	hashing::hasher hasher{hashing::hash_algorithm::sha256};
+ 
+ 	reader.restart();
+@@ -99,7 +99,7 @@
+ 
+ void hash::verify_data_against_hash(std::string_view data, const hash &hash)
+ {
+-	hashing::hasher hasher(hashing::algorithm::sha256);
++	hashing::hasher hasher(hashing::hash_algorithm::sha256);
+ 	hasher.hash_data(data);
+ 	auto computed_hash = hasher.get_hash();
+ 
+@@ -61,9 +61,9 @@
+ {
+ 	switch (m_algorithm)
+ 	{
+-	case algorithm::md5:
++	case hash_algorithm::md5:
+ 		return "md5";
+-	case algorithm::sha256:
++	case hash_algorithm::sha256:
+ 		return "sha256";
+ 	default:
+ 		throw errors::user_exception(errors::error_code::hash_invalid_algorithm,
+--- a/src/native/hashing/hasher.h
++++ b/src/native/hashing/hasher.h
+@@ -32,7 +32,7 @@
+ class hasher
+ {
+ 	public:
+-	hasher(algorithm alg);
++	hasher(hash_algorithm alg);
+ 	~hasher();
+ 	void reset();
+ 	int hash_data(std::span<char> data) { return hash_data(data.data(), data.size()); }
+@@ -49,7 +49,7 @@
+ 	}
+ 
+ 	private:
+-	algorithm m_alg;
++	hash_algorithm m_alg;
+ #ifdef USE_BCRYPT
+ 	struct algorithm_provider_handle_deleter
+ 	{
+--- a/src/native/hashing/hasher.cpp
++++ b/src/native/hashing/hasher.cpp
+@@ -136,7 +136,7 @@
+ #endif
+ 
+ #ifdef USE_OPENSSL
+-const EVP_MD *algorithm_to_EVP_MP(algorithm alg)
++const EVP_MD *algorithm_to_EVP_MP(hash_algorithm alg)
+ {
+ 	switch (alg)
+ 	{
+-	case algorithm::md5:
++	case hash_algorithm::md5:
+ 		return EVP_md5();
+-	case algorithm::sha256:
++	case hash_algorithm::sha256:
+ 		return EVP_sha256();
+ 	default:
+ 		std::string algo_string = "Unknown OpenSSL algorithm: " + std::to_string(static_cast<int>(alg));
+@@ -214,7 +214,7 @@
+ #endif
+ }
+ 
+-hasher::hasher(algorithm alg) : m_alg(alg)
++hasher::hasher(hash_algorithm alg) : m_alg(alg)
+ {
+ 	reset();
+ }
+@@ -69,12 +69,12 @@
+ #ifdef USE_BCRYPT
+ 	switch (alg)
+ 	{
+-	case algorithm::md5:
++	case hash_algorithm::md5:
+ 		return BCRYPT_MD5_ALGORITHM;
+-	case algorithm::sha256:
++	case hash_algorithm::sha256:
+ 		return BCRYPT_SHA256_ALGORITHM;
+ 	default:
+ 		std::string msg = "alg_to_BCRYPT_ALG_ID() has invalid value: " + std::to_string(static_cast<int>(alg));
+ 		throw errors::user_exception(errors::error_code::hash_alg_id_to_algorithm_name, msg);
+ 	}
+ }
+@@ -99,12 +99,12 @@
+ {
+ 	switch (alg_id)
+ 	{
+-	case algorithm::md5:
++	case hash_algorithm::md5:
+ 		return L"MD5";
+-	case algorithm::sha256:
++	case hash_algorithm::sha256:
+ 		return L"SHA256";
+ 	default:
+ 		std::string msg = "ALG_ID_to_algorithm_name() has invalid value: " + std::to_string(static_cast<int>(alg_id));
+ 		throw errors::user_exception(errors::error_code::hash_alg_id_to_algorithm_name, msg);
+ 	}
+ }

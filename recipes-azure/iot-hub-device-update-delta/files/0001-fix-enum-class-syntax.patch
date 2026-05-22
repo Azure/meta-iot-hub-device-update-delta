@@ -1,0 +1,11 @@
+--- a/src/native/hashing/algorithm.h
++++ b/src/native/hashing/algorithm.h
+@@ -20,7 +20,7 @@
+ namespace archive_diff::hashing
+ {
+ // Enum for hashing algorithms
+-enum class adu_algorithm : uint32_t
++enum adu_algorithm : uint32_t
+ {
+ 	invalid = 0,
+ 	md5     = 32771,
