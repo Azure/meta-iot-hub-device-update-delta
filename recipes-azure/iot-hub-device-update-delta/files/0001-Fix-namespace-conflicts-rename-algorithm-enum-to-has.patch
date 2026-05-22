@@ -1,0 +1,1715 @@
+From d0a12b3ccd045d387601f4ece5ae1a8809752d47 Mon Sep 17 00:00:00 2001
+From: Nox-MSFT <wewilair@microsoft.com>
+Date: Thu, 6 Nov 2025 22:01:33 +0000
+Subject: [PATCH] Fix namespace conflicts: rename algorithm enum to
+ hash_algorithm
+
+- Rename enum class algorithm to hash_algorithm to avoid conflicts with STL <algorithm> header
+- Update all references throughout the codebase to use the new type name
+- Prevents namespace collisions in cross-compilation environments
+---
+ ...nflicts-rename-algorithm-enum-to-adu.patch | 864 ++++++++++++++++++
+ .../diffs/api/aduapi_type_conversion.cpp      |   6 +-
+ src/native/diffs/api/aduapi_type_conversion.h |   2 +-
+ src/native/diffs/core/gtest/common.cpp        |   2 +-
+ .../diffs/core/gtest/test_item_definition.cpp |  24 +-
+ src/native/diffs/core/item_definition.cpp     |   8 +-
+ src/native/diffs/core/item_definition.h       |   4 +-
+ .../diffs/core/item_definition_helpers.cpp    |   6 +-
+ src/native/diffs/core/prepared_item.cpp       |   2 +-
+ src/native/diffs/core/slicer.cpp              |   2 +-
+ .../diffs/recipes/basic/gtest/common.cpp      |   2 +-
+ .../basic/gtest/inline_asset_recipe_tests.cpp |  22 +-
+ .../basic/gtest/test_all_zeros_recipe.cpp     |  12 +-
+ .../serialization/standard/deserializer.cpp   |   2 +-
+ .../serialization/standard/serializer.cpp     |   2 +-
+ src/native/hashing/algorithm.cpp              |  18 +-
+ src/native/hashing/algorithm.h                |  10 +-
+ src/native/hashing/hash.cpp                   |  10 +-
+ src/native/hashing/hash.h                     |   8 +-
+ src/native/hashing/hasher.cpp                 |   8 +-
+ src/native/hashing/hasher.h                   |   2 +-
+ .../io/hashed/gtest/io_hashed_gtest.cpp       |  12 +-
+ src/native/test_utility/buffer_helpers.cpp    |   2 +-
+ src/native/tools/dumpextfs/load_ext4.cpp      |   6 +-
+ src/native/tools/extract/extract.cpp          |   6 +-
+ src/native/tools/recompress/recompress.cpp    |   2 +-
+ .../tools/recompress/recompress_tool.cpp      |   2 +-
+ .../zstd_compress_file/get_file_hash.cpp      |   2 +-
+ 28 files changed, 956 insertions(+), 92 deletions(-)
+ create mode 100644 0001-Fix-namespace-conflicts-rename-algorithm-enum-to-adu.patch
+
+diff --git a/0001-Fix-namespace-conflicts-rename-algorithm-enum-to-adu.patch b/0001-Fix-namespace-conflicts-rename-algorithm-enum-to-adu.patch
+new file mode 100644
+index 0000000..f6aca88
+--- /dev/null
++++ b/0001-Fix-namespace-conflicts-rename-algorithm-enum-to-adu.patch
+@@ -0,0 +1,864 @@
++From f71db6fa521ace045047aa5686c6a263345c28ef Mon Sep 17 00:00:00 2001
++From: Nox-MSFT <wewilair@microsoft.com>
++Date: Thu, 6 Nov 2025 21:50:37 +0000
++Subject: [PATCH] Fix namespace conflicts: rename algorithm enum to
++ adu_algorithm
++
++- Rename enum class algorithm to adu_algorithm to avoid conflicts with STL <algorithm>
++- Update all type references, member variables, and function signatures
++- Update array definitions and enum value references throughout codebase
++- Ensures compatibility with cross-compilation environments that include STL headers
++---
++ .../diffs/api/aduapi_type_conversion.cpp      |  6 ++---
++ src/native/diffs/api/aduapi_type_conversion.h |  2 +-
++ src/native/diffs/core/gtest/common.cpp        |  2 +-
++ .../diffs/core/gtest/test_item_definition.cpp | 24 +++++++++----------
++ src/native/diffs/core/item_definition.cpp     |  8 +++----
++ src/native/diffs/core/item_definition.h       |  2 +-
++ .../diffs/core/item_definition_helpers.cpp    |  6 ++---
++ src/native/diffs/core/prepared_item.cpp       |  2 +-
++ src/native/diffs/core/slicer.cpp              |  2 +-
++ .../diffs/recipes/basic/gtest/common.cpp      |  2 +-
++ .../basic/gtest/inline_asset_recipe_tests.cpp | 22 ++++++++---------
++ .../basic/gtest/test_all_zeros_recipe.cpp     | 12 +++++-----
++ .../serialization/standard/deserializer.cpp   |  2 +-
++ .../serialization/standard/serializer.cpp     |  2 +-
++ src/native/hashing/algorithm.cpp              | 18 +++++++-------
++ src/native/hashing/algorithm.h                | 10 ++++----
++ src/native/hashing/hash.cpp                   | 10 ++++----
++ src/native/hashing/hash.h                     |  8 +++----
++ src/native/hashing/hasher.cpp                 | 14 +++++------
++ src/native/hashing/hasher.h                   |  4 ++--
++ .../io/hashed/gtest/io_hashed_gtest.cpp       | 12 +++++-----
++ src/native/test_utility/buffer_helpers.cpp    |  2 +-
++ src/native/tools/dumpextfs/load_ext4.cpp      |  6 ++---
++ src/native/tools/extract/extract.cpp          |  6 ++---
++ src/native/tools/recompress/recompress.cpp    |  2 +-
++ .../tools/recompress/recompress_tool.cpp      |  2 +-
++ .../zstd_compress_file/get_file_hash.cpp      |  2 +-
++ 27 files changed, 95 insertions(+), 95 deletions(-)
++
++diff --git a/src/native/diffs/api/aduapi_type_conversion.cpp b/src/native/diffs/api/aduapi_type_conversion.cpp
++index 568bd73..61c0333 100644
++--- a/src/native/diffs/api/aduapi_type_conversion.cpp
+++++ b/src/native/diffs/api/aduapi_type_conversion.cpp
++@@ -6,14 +6,14 @@
++  */
++ #include "aduapi_type_conversion.h"
++ 
++-archive_diff::hashing::algorithm diffc_hash_type_to_algorithm(uint32_t type)
+++archive_diff::hashing::adu_algorithm diffc_hash_type_to_algorithm(uint32_t type)
++ {
++ 	switch (static_cast<diffc_hash_type>(type))
++ 	{
++ 	case diffc_hash_type::diffc_hash_md5:
++-		return archive_diff::hashing::algorithm::md5;
+++		return archive_diff::hashing::adu_algorithm::md5;
++ 	case diffc_hash_type::diffc_hash_sha256:
++-		return archive_diff::hashing::algorithm::sha256;
+++		return archive_diff::hashing::adu_algorithm::sha256;
++ 	}
++ 	std::string msg = "Unexpected hash type: " + std::to_string(static_cast<int>(type));
++ 	throw archive_diff::errors::user_exception(archive_diff::errors::error_code::api_unexpected_hash_type, msg);
++diff --git a/src/native/diffs/api/aduapi_type_conversion.h b/src/native/diffs/api/aduapi_type_conversion.h
++index 4dc829e..aafc954 100644
++--- a/src/native/diffs/api/aduapi_type_conversion.h
+++++ b/src/native/diffs/api/aduapi_type_conversion.h
++@@ -10,6 +10,6 @@
++ #include <hashing/algorithm.h>
++ #include <diffs/core/item_definition.h>
++ 
++-archive_diff::hashing::algorithm diffc_hash_type_to_algorithm(uint32_t type);
+++archive_diff::hashing::adu_algorithm diffc_hash_type_to_algorithm(uint32_t type);
++ archive_diff::diffs::core::item_definition diffc_item_definition_to_core_item_definition(
++ 	const diffc_item_definition &diffc_item);
++\ No newline at end of file
++diff --git a/src/native/diffs/core/gtest/common.cpp b/src/native/diffs/core/gtest/common.cpp
++index 25290f9..21dac63 100644
++--- a/src/native/diffs/core/gtest/common.cpp
+++++ b/src/native/diffs/core/gtest/common.cpp
++@@ -10,7 +10,7 @@
++ 
++ item_definition create_definition_from_data(std::vector<char> &data)
++ {
++-	archive_diff::hashing::hasher hasher(archive_diff::hashing::algorithm::sha256);
+++	archive_diff::hashing::hasher hasher(archive_diff::hashing::adu_algorithm::sha256);
++ 	hasher.hash_data(std::string_view{data.data(), data.capacity()});
++ 	auto hash = hasher.get_hash();
++ 
++diff --git a/src/native/diffs/core/gtest/test_item_definition.cpp b/src/native/diffs/core/gtest/test_item_definition.cpp
++index 07ba917..146c9f8 100644
++--- a/src/native/diffs/core/gtest/test_item_definition.cpp
+++++ b/src/native/diffs/core/gtest/test_item_definition.cpp
++@@ -13,10 +13,10 @@ TEST(item_definition, operator_less_than_overload_starting_equivalent_items)
++ {
++ 	using item_definition = archive_diff::diffs::core::item_definition;
++ 
++-	archive_diff::hashing::hasher sha256(archive_diff::hashing::algorithm::sha256);
+++	archive_diff::hashing::hasher sha256(archive_diff::hashing::adu_algorithm::sha256);
++ 	auto hash1 = sha256.get_hash();
++ 
++-	archive_diff::hashing::hasher md5(archive_diff::hashing::algorithm::md5);
+++	archive_diff::hashing::hasher md5(archive_diff::hashing::adu_algorithm::md5);
++ 	auto hash2 = md5.get_hash();
++ 
++ 	// two items with no hashes (and same name) at construction and equal length should
++@@ -57,10 +57,10 @@ TEST(item_definition, operator_less_than_overload_starting_differing_sized_items
++ {
++ 	using item_definition = archive_diff::diffs::core::item_definition;
++ 
++-	archive_diff::hashing::hasher sha256(archive_diff::hashing::algorithm::sha256);
+++	archive_diff::hashing::hasher sha256(archive_diff::hashing::adu_algorithm::sha256);
++ 	auto hash1 = sha256.get_hash();
++ 
++-	archive_diff::hashing::hasher md5(archive_diff::hashing::algorithm::md5);
+++	archive_diff::hashing::hasher md5(archive_diff::hashing::adu_algorithm::md5);
++ 	auto hash2 = md5.get_hash();
++ 
++ 	// two items with no hashes (and same name) at construction, but first is smaller than second
++@@ -101,10 +101,10 @@ TEST(item_definition, match_starting_equivalent_items)
++ {
++ 	using item_definition = archive_diff::diffs::core::item_definition;
++ 
++-	archive_diff::hashing::hasher sha256(archive_diff::hashing::algorithm::sha256);
+++	archive_diff::hashing::hasher sha256(archive_diff::hashing::adu_algorithm::sha256);
++ 	auto hash1 = sha256.get_hash();
++ 
++-	archive_diff::hashing::hasher md5(archive_diff::hashing::algorithm::md5);
+++	archive_diff::hashing::hasher md5(archive_diff::hashing::adu_algorithm::md5);
++ 	auto hash2 = md5.get_hash();
++ 
++ 	// two items with no hashes (and same name) at construction and equal length should
++@@ -143,10 +143,10 @@ TEST(item_definition, match_starting_differing_sized_items)
++ {
++ 	using item_definition = archive_diff::diffs::core::item_definition;
++ 
++-	archive_diff::hashing::hasher sha256(archive_diff::hashing::algorithm::sha256);
+++	archive_diff::hashing::hasher sha256(archive_diff::hashing::adu_algorithm::sha256);
++ 	auto hash1 = sha256.get_hash();
++ 
++-	archive_diff::hashing::hasher md5(archive_diff::hashing::algorithm::md5);
+++	archive_diff::hashing::hasher md5(archive_diff::hashing::adu_algorithm::md5);
++ 	auto hash2 = md5.get_hash();
++ 
++ 	// two items with no hashes (and same name) at construction, but first is smaller than second
++@@ -188,10 +188,10 @@ TEST(item_definition, has_matching_hash)
++ {
++ 	using item_definition = archive_diff::diffs::core::item_definition;
++ 
++-	archive_diff::hashing::hasher sha256(archive_diff::hashing::algorithm::sha256);
+++	archive_diff::hashing::hasher sha256(archive_diff::hashing::adu_algorithm::sha256);
++ 	auto hash1 = sha256.get_hash();
++ 
++-	archive_diff::hashing::hasher md5(archive_diff::hashing::algorithm::md5);
+++	archive_diff::hashing::hasher md5(archive_diff::hashing::adu_algorithm::md5);
++ 	auto hash2 = md5.get_hash();
++ 
++ 	item_definition test_data[] = {
++@@ -228,10 +228,10 @@ TEST(item_definition, size)
++ {
++ 	using item_definition = archive_diff::diffs::core::item_definition;
++ 
++-	archive_diff::hashing::hasher sha256(archive_diff::hashing::algorithm::sha256);
+++	archive_diff::hashing::hasher sha256(archive_diff::hashing::adu_algorithm::sha256);
++ 	auto hash1 = sha256.get_hash();
++ 
++-	archive_diff::hashing::hasher md5(archive_diff::hashing::algorithm::md5);
+++	archive_diff::hashing::hasher md5(archive_diff::hashing::adu_algorithm::md5);
++ 	auto hash2 = md5.get_hash();
++ 
++ 	std::pair<item_definition, uint64_t> test_data[] = {
++diff --git a/src/native/diffs/core/item_definition.cpp b/src/native/diffs/core/item_definition.cpp
++index 3efabf1..966eac1 100644
++--- a/src/native/diffs/core/item_definition.cpp
+++++ b/src/native/diffs/core/item_definition.cpp
++@@ -26,7 +26,7 @@ bool item_definition::operator<(const item_definition &rhs) const
++ 		return m_hashes.size() < rhs.m_hashes.size();
++ 	}
++ 
++-	for (auto algorithm : hashing::all_algorithms)
+++	for (auto algorithm : hashing::all_adu_algorithms)
++ 	{
++ 		bool left_has_hash  = m_hashes.count(algorithm) > 0;
++ 		bool right_has_hash = rhs.m_hashes.count(algorithm) > 0;
++@@ -78,7 +78,7 @@ bool item_definition::operator==(const item_definition &rhs) const
++ 		return false;
++ 	}
++ 
++-	for (auto algorithm : hashing::all_algorithms)
+++	for (auto algorithm : hashing::all_adu_algorithms)
++ 	{
++ 		bool left_has_hash  = m_hashes.count(algorithm) > 0;
++ 		bool right_has_hash = rhs.m_hashes.count(algorithm) > 0;
++@@ -178,7 +178,7 @@ item_definition::match_result item_definition::match(const item_definition &rhs)
++ 		return match_result::no_match;
++ 	}
++ 
++-	for (auto algorithm : hashing::all_algorithms)
+++	for (auto algorithm : hashing::all_adu_algorithms)
++ 	{
++ 		bool left_has_hash  = m_hashes.count(algorithm) > 0;
++ 		bool right_has_hash = rhs.m_hashes.count(algorithm) > 0;
++@@ -282,7 +282,7 @@ void item_definition::write(io::sequential::writer &writer, serialization_option
++ 	{
++ 		if (include_only_sha256_hash)
++ 		{
++-			auto itr = m_hashes.find(hashing::algorithm::sha256);
+++			auto itr = m_hashes.find(hashing::adu_algorithm::sha256);
++ 
++ 			if (itr == m_hashes.cend())
++ 			{
++diff --git a/src/native/diffs/core/item_definition.h b/src/native/diffs/core/item_definition.h
++index 27302cb..87c8312 100644
++--- a/src/native/diffs/core/item_definition.h
+++++ b/src/native/diffs/core/item_definition.h
++@@ -51,7 +51,7 @@ class item_definition
++ 	[[nodiscard]] item_definition with_hash(const hashing::hash &hash) const;
++ 
++ 	using item_names_set  = std::set<std::string>;
++-	using item_hashes_map = std::map<hashing::algorithm, hashing::hash>;
+++	using item_hashes_map = std::map<hashing::adu_algorithm, hashing::hash>;
++ 
++ 	const item_hashes_map &get_hashes() const { return m_hashes; }
++ 	const item_names_set &get_names() const { return m_names; }
++diff --git a/src/native/diffs/core/item_definition_helpers.cpp b/src/native/diffs/core/item_definition_helpers.cpp
++index 85adb21..165c135 100644
++--- a/src/native/diffs/core/item_definition_helpers.cpp
+++++ b/src/native/diffs/core/item_definition_helpers.cpp
++@@ -17,7 +17,7 @@ item_definition create_definition_from_span(const std::span<char> data)
++ 
++ item_definition create_definition_from_string_view(std::string_view data)
++ {
++-	hashing::hasher hasher(hashing::algorithm::sha256);
+++	hashing::hasher hasher(hashing::adu_algorithm::sha256);
++ 
++ 	hasher.hash_data(data.data(), data.size());
++ 	auto hash = hasher.get_hash();
++@@ -37,7 +37,7 @@ item_definition create_definition_from_vector_using_size(std::vector<char> &data
++ 
++ item_definition create_definition_from_reader(io::reader &reader)
++ {
++-	hashing::hasher hasher(hashing::algorithm::sha256);
+++	hashing::hasher hasher(hashing::adu_algorithm::sha256);
++ 
++ 	const size_t block_size = 8 * 1024;
++ 
++@@ -62,7 +62,7 @@ item_definition create_definition_from_reader(io::reader &reader)
++ 
++ item_definition create_definition_from_sequential_reader(io::sequential::reader *reader)
++ {
++-	hashing::hasher hasher(hashing::algorithm::sha256);
+++	hashing::hasher hasher(hashing::adu_algorithm::sha256);
++ 
++ 	const size_t block_size = 8 * 1024;
++ 
++diff --git a/src/native/diffs/core/prepared_item.cpp b/src/native/diffs/core/prepared_item.cpp
++index 226a807..0ad2101 100644
++--- a/src/native/diffs/core/prepared_item.cpp
+++++ b/src/native/diffs/core/prepared_item.cpp
++@@ -198,7 +198,7 @@ void prepared_item::write([[maybe_unused]] std::shared_ptr<io::writer> &writer)
++ {
++ 	auto reader = make_sequential_reader();
++ #if 0
++-	auto hasher = std::make_shared<hashing::hasher>(hashing::algorithm::sha256);
+++	auto hasher = std::make_shared<hashing::hasher>(hashing::adu_algorithm::sha256);
++ 	io::hashed::hashed_sequential_writer hashed_writer(writer, hasher);
++ 
++ 	hashed_writer.write(*reader);
++diff --git a/src/native/diffs/core/slicer.cpp b/src/native/diffs/core/slicer.cpp
++index c7e54df..491be90 100644
++--- a/src/native/diffs/core/slicer.cpp
+++++ b/src/native/diffs/core/slicer.cpp
++@@ -346,7 +346,7 @@ void slicer::slice_and_populate_slice_store(const item_definition &item_to_slice
++ 	auto reader = prepared_item_to_slice->make_sequential_reader();
++ 
++ 	// printf("We're slicing %s\n", item_to_slice.to_string().c_str());
++-	hashing::hasher hasher(hashing::algorithm::sha256);
+++	hashing::hasher hasher(hashing::adu_algorithm::sha256);
++ 
++ 	for (auto offset_and_slice : *slices_requested)
++ 	{
++diff --git a/src/native/diffs/recipes/basic/gtest/common.cpp b/src/native/diffs/recipes/basic/gtest/common.cpp
++index 25290f9..21dac63 100644
++--- a/src/native/diffs/recipes/basic/gtest/common.cpp
+++++ b/src/native/diffs/recipes/basic/gtest/common.cpp
++@@ -10,7 +10,7 @@
++ 
++ item_definition create_definition_from_data(std::vector<char> &data)
++ {
++-	archive_diff::hashing::hasher hasher(archive_diff::hashing::algorithm::sha256);
+++	archive_diff::hashing::hasher hasher(archive_diff::hashing::adu_algorithm::sha256);
++ 	hasher.hash_data(std::string_view{data.data(), data.capacity()});
++ 	auto hash = hasher.get_hash();
++ 
++diff --git a/src/native/diffs/recipes/basic/gtest/inline_asset_recipe_tests.cpp b/src/native/diffs/recipes/basic/gtest/inline_asset_recipe_tests.cpp
++index 62aa504..f96c358 100644
++--- a/src/native/diffs/recipes/basic/gtest/inline_asset_recipe_tests.cpp
+++++ b/src/native/diffs/recipes/basic/gtest/inline_asset_recipe_tests.cpp
++@@ -26,7 +26,7 @@ TEST(inline_asset_recipe, make_reader)
++ 		{
++ 			auto expected_data = std::string_view{c_test_inline_asset_data + offset, length};
++ 
++-			archive_diff::hashing::hasher hasher(archive_diff::hashing::algorithm::sha256);
+++			archive_diff::hashing::hasher hasher(archive_diff::hashing::adu_algorithm::sha256);
++ 			hasher.hash_data(expected_data);
++ 
++ 			archive_diff::diffs::blob_definition blobdef;
++@@ -46,7 +46,7 @@ TEST(inline_asset_recipe, make_reader)
++ 			ASSERT_EQ(recipe_result_data.size(), expected_data.size());
++ 			ASSERT_EQ(0, memcmp(recipe_result_data.data(), expected_data.data(), expected_data.size()));
++ 
++-			archive_diff::hashing::hasher result_hasher(archive_diff::hashing::algorithm::sha256);
+++			archive_diff::hashing::hasher result_hasher(archive_diff::hashing::adu_algorithm::sha256);
++ 			result_hasher.hash_data(recipe_result_data);
++ 
++ 			archive_diff::hashing::hash::verify_hashes_match(expected_hash, result_hasher.get_hash());
++@@ -72,7 +72,7 @@ TEST(inline_asset_recipe, apply)
++ 		{
++ 			auto expected_data = std::string_view{c_test_inline_asset_data + offset, length};
++ 
++-			archive_diff::hashing::hasher hasher(archive_diff::hashing::algorithm::sha256);
+++			archive_diff::hashing::hasher hasher(archive_diff::hashing::adu_algorithm::sha256);
++ 			hasher.hash_data(expected_data);
++ 
++ 			archive_diff::diffs::blob_definition blobdef;
++@@ -88,7 +88,7 @@ TEST(inline_asset_recipe, apply)
++ 			std::shared_ptr<archive_diff::io::writer> buffer_writer =
++ 				std::make_shared<archive_diff::io::buffer::writer>(write_result_buffer);
++ 			auto write_result_hasher =
++-				std::make_shared<archive_diff::hashing::hasher>(archive_diff::hashing::algorithm::sha256);
+++				std::make_shared<archive_diff::hashing::hasher>(archive_diff::hashing::adu_algorithm::sha256);
++ 			archive_diff::io::hashed::hashed_sequential_writer hashed_writer(buffer_writer, write_result_hasher);
++ 
++ 			recipe.apply(&context, hashed_writer);
++@@ -96,7 +96,7 @@ TEST(inline_asset_recipe, apply)
++ 			ASSERT_EQ(write_result_buffer->size(), expected_data.size());
++ 			ASSERT_EQ(0, std::memcmp(write_result_buffer->data(), expected_data.data(), expected_data.size()));
++ 
++-			archive_diff::hashing::hasher result_hasher(archive_diff::hashing::algorithm::sha256);
+++			archive_diff::hashing::hasher result_hasher(archive_diff::hashing::adu_algorithm::sha256);
++ 			result_hasher.hash_data(*write_result_buffer);
++ 
++ 			archive_diff::hashing::hash::verify_hashes_match(expected_hash, result_hasher.get_hash());
++@@ -116,7 +116,7 @@ TEST(inline_asset_recipe, no_inline_assets)
++ 		{
++ 			auto expected_data = std::string_view{c_test_inline_asset_data + offset, length};
++ 
++-			archive_diff::hashing::hasher hasher(archive_diff::hashing::algorithm::sha256);
+++			archive_diff::hashing::hasher hasher(archive_diff::hashing::adu_algorithm::sha256);
++ 			hasher.hash_data(expected_data);
++ 
++ 			archive_diff::diffs::blob_definition blobdef;
++@@ -151,7 +151,7 @@ TEST(inline_asset_recipe, make_reader_buggy_result_bad_hash)
++ 		{
++ 			auto expected_data = std::string_view{c_test_inline_asset_data + offset, length};
++ 
++-			archive_diff::hashing::hasher hasher(archive_diff::hashing::algorithm::sha256);
+++			archive_diff::hashing::hasher hasher(archive_diff::hashing::adu_algorithm::sha256);
++ 			hasher.hash_data(expected_data);
++ 
++ 			archive_diff::diffs::blob_definition blobdef;
++@@ -173,7 +173,7 @@ TEST(inline_asset_recipe, make_reader_buggy_result_bad_hash)
++ 				ASSERT_NE(0, memcmp(buggy_recipe_result_data.data(), expected_data.data(), expected_data.size()));
++ 			}
++ 
++-			archive_diff::hashing::hasher buggy_result_hasher(archive_diff::hashing::algorithm::sha256);
+++			archive_diff::hashing::hasher buggy_result_hasher(archive_diff::hashing::adu_algorithm::sha256);
++ 			buggy_result_hasher.hash_data(buggy_recipe_result_data);
++ 
++ 			bool caught_exception = false;
++@@ -210,7 +210,7 @@ TEST(inline_asset_recipe, apply_buggy_result_bad_hash)
++ 		{
++ 			auto expected_data = std::string_view{c_test_inline_asset_data + offset, length};
++ 
++-			archive_diff::hashing::hasher hasher(archive_diff::hashing::algorithm::sha256);
+++			archive_diff::hashing::hasher hasher(archive_diff::hashing::adu_algorithm::sha256);
++ 			hasher.hash_data(expected_data);
++ 
++ 			archive_diff::diffs::blob_definition blobdef;
++@@ -226,7 +226,7 @@ TEST(inline_asset_recipe, apply_buggy_result_bad_hash)
++ 			std::shared_ptr<archive_diff::io::writer> buffer_writer =
++ 				std::make_shared<archive_diff::io::buffer::writer>(write_result_buffer);
++ 			auto write_result_hasher =
++-				std::make_shared<archive_diff::hashing::hasher>(archive_diff::hashing::algorithm::sha256);
+++				std::make_shared<archive_diff::hashing::hasher>(archive_diff::hashing::adu_algorithm::sha256);
++ 
++ 			archive_diff::io::hashed::hashed_sequential_writer hashed_writer(buffer_writer, write_result_hasher);
++ 
++@@ -237,7 +237,7 @@ TEST(inline_asset_recipe, apply_buggy_result_bad_hash)
++ 				ASSERT_NE(0, std::memcmp(write_result_buffer->data(), expected_data.data(), expected_data.size()));
++ 			}
++ 
++-			archive_diff::hashing::hasher result_hasher(archive_diff::hashing::algorithm::sha256);
+++			archive_diff::hashing::hasher result_hasher(archive_diff::hashing::adu_algorithm::sha256);
++ 			result_hasher.hash_data(*write_result_buffer);
++ 
++ 			bool caught_exception = false;
++diff --git a/src/native/diffs/recipes/basic/gtest/test_all_zeros_recipe.cpp b/src/native/diffs/recipes/basic/gtest/test_all_zeros_recipe.cpp
++index 54504b4..c6e9fac 100644
++--- a/src/native/diffs/recipes/basic/gtest/test_all_zeros_recipe.cpp
+++++ b/src/native/diffs/recipes/basic/gtest/test_all_zeros_recipe.cpp
++@@ -31,7 +31,7 @@ void test_all_zero_reader(
++ 	ASSERT_EQ(result_data.size(), expected_data.size());
++ 	ASSERT_EQ(0, std::memcmp(result_data.data(), expected_data.data(), expected_data.size()));
++ 
++-	archive_diff::hashing::hasher result_hasher(archive_diff::hashing::algorithm::sha256);
+++	archive_diff::hashing::hasher result_hasher(archive_diff::hashing::adu_algorithm::sha256);
++ 	result_hasher.hash_data(result_data);
++ 	auto actual_hash = result_hasher.get_hash();
++ 
++@@ -53,7 +53,7 @@ void test_all_zero_sequential_reader(
++ 	ASSERT_EQ(result_data.size(), expected_data.size());
++ 	ASSERT_EQ(0, std::memcmp(result_data.data(), expected_data.data(), expected_data.size()));
++ 
++-	archive_diff::hashing::hasher result_hasher(archive_diff::hashing::algorithm::sha256);
+++	archive_diff::hashing::hasher result_hasher(archive_diff::hashing::adu_algorithm::sha256);
++ 	result_hasher.hash_data(result_data);
++ 	auto actual_hash = result_hasher.get_hash();
++ 
++@@ -66,7 +66,7 @@ TEST(zeros_io_device, make_reader)
++ 	{
++ 		std::vector<char> expected_data;
++ 		expected_data.resize(num_zeros);
++-		archive_diff::hashing::hasher hasher(archive_diff::hashing::algorithm::sha256);
+++		archive_diff::hashing::hasher hasher(archive_diff::hashing::adu_algorithm::sha256);
++ 		hasher.hash_data(expected_data);
++ 		auto expected_hash = hasher.get_hash();
++ 
++@@ -82,7 +82,7 @@ TEST(all_zero_recipe, prepare)
++ 	{
++ 		std::vector<char> expected_data;
++ 		expected_data.resize(num_zeros);
++-		archive_diff::hashing::hasher hasher(archive_diff::hashing::algorithm::sha256);
+++		archive_diff::hashing::hasher hasher(archive_diff::hashing::adu_algorithm::sha256);
++ 		hasher.hash_data(expected_data);
++ 		auto expected_hash = hasher.get_hash();
++ 
++@@ -119,7 +119,7 @@ TEST(all_zero_recipe_template, make_reader)
++ 	{
++ 		std::vector<char> expected_data;
++ 		expected_data.resize(num_zeros);
++-		archive_diff::hashing::hasher hasher(archive_diff::hashing::algorithm::sha256);
+++		archive_diff::hashing::hasher hasher(archive_diff::hashing::adu_algorithm::sha256);
++ 		hasher.hash_data(expected_data);
++ 		auto expected_hash = hasher.get_hash();
++ 
++@@ -159,7 +159,7 @@ TEST(all_zero_recipe, fetch_from_kitchen)
++ 	{
++ 		std::vector<char> expected_data;
++ 		expected_data.resize(num_zeros);
++-		archive_diff::hashing::hasher hasher(archive_diff::hashing::algorithm::sha256);
+++		archive_diff::hashing::hasher hasher(archive_diff::hashing::adu_algorithm::sha256);
++ 		hasher.hash_data(expected_data);
++ 		auto expected_hash = hasher.get_hash();
++ 
++diff --git a/src/native/diffs/serialization/standard/deserializer.cpp b/src/native/diffs/serialization/standard/deserializer.cpp
++index 17077c7..733a859 100644
++--- a/src/native/diffs/serialization/standard/deserializer.cpp
+++++ b/src/native/diffs/serialization/standard/deserializer.cpp
++@@ -347,7 +347,7 @@ void deserializer::add_nested_archive(const std::string &path)
++ 	auto reader            = io::file::io_device::make_reader(path);
++ 	auto archive_data_size = reader.size();
++ 
++-	hashing::hash archive_data_hash{hashing::algorithm::sha256, reader};
+++	hashing::hash archive_data_hash{hashing::adu_algorithm::sha256, reader};
++ 	auto archive_data_item = core::item_definition{archive_data_size}.with_hash(archive_data_hash);
++ 
++ 	deserializer nested;
++diff --git a/src/native/diffs/serialization/standard/serializer.cpp b/src/native/diffs/serialization/standard/serializer.cpp
++index e32ebc5..abc558f 100644
++--- a/src/native/diffs/serialization/standard/serializer.cpp
+++++ b/src/native/diffs/serialization/standard/serializer.cpp
++@@ -155,7 +155,7 @@ void serializer::write_nested_archives(io::sequential::writer &writer)
++ 	{
++ 		auto serialized_diff                      = std::make_shared<std::vector<char>>();
++ 		std::shared_ptr<io::writer> buffer_writer = std::make_shared<io::buffer::writer>(serialized_diff);
++-		auto hasher                               = std::make_shared<hashing::hasher>(hashing::algorithm::sha256);
+++		auto hasher                               = std::make_shared<hashing::hasher>(hashing::adu_algorithm::sha256);
++ 		io::hashed::hashed_sequential_writer seq(buffer_writer, hasher);
++ 
++ 		serializer nested(archive);
++diff --git a/src/native/hashing/algorithm.cpp b/src/native/hashing/algorithm.cpp
++index 904bbd7..c6b6e1b 100644
++--- a/src/native/hashing/algorithm.cpp
+++++ b/src/native/hashing/algorithm.cpp
++@@ -13,13 +13,13 @@
++ 
++ namespace archive_diff::hashing
++ {
++-size_t get_byte_count_for_algorithm(algorithm algo)
+++size_t get_byte_count_for_algorithm(adu_algorithm algo)
++ {
++ 	switch (algo)
++ 	{
++-	case algorithm::md5:
+++	case adu_algorithm::md5:
++ 		return 16;
++-	case algorithm::sha256:
+++	case adu_algorithm::sha256:
++ 		return 32;
++ 	default:
++ 		std::string msg = "diffs::hash::get_byte_count_for_algorithm(): Unexpected hash type: "
++@@ -28,13 +28,13 @@ size_t get_byte_count_for_algorithm(algorithm algo)
++ 	}
++ }
++ 
++-std::string get_algorithm_name(algorithm algo)
+++std::string get_algorithm_name(adu_algorithm algo)
++ {
++ 	switch (algo)
++ 	{
++-	case algorithm::md5:
+++	case adu_algorithm::md5:
++ 		return "md5";
++-	case algorithm::sha256:
+++	case adu_algorithm::sha256:
++ 		return "sha256";
++ 	default:
++ 		std::string msg =
++@@ -44,13 +44,13 @@ std::string get_algorithm_name(algorithm algo)
++ }
++ 
++ #ifdef USE_LIBGCRYPT
++-int alg_to_gcrypt_algo(hashing::algorithm alg)
+++int alg_to_gcrypt_algo(hashing::adu_algorithm alg)
++ {
++ 	switch (alg)
++ 	{
++-	case hashing::algorithm::md5:
+++	case hashing::adu_algorithm::md5:
++ 		return GCRY_MD_MD5;
++-	case hashing::algorithm::sha256:
+++	case hashing::adu_algorithm::sha256:
++ 		return GCRY_MD_SHA256;
++ 	default:
++ 		std::string msg = "alg_to_gcrypt_algo() has invalid value: " + std::to_string(static_cast<int>(alg));
++diff --git a/src/native/hashing/algorithm.h b/src/native/hashing/algorithm.h
++index 485e18d..a4559bf 100644
++--- a/src/native/hashing/algorithm.h
+++++ b/src/native/hashing/algorithm.h
++@@ -20,20 +20,20 @@
++ 
++ namespace archive_diff::hashing
++ {
++-enum class algorithm : uint32_t
+++enum class adu_algorithm : uint32_t
++ {
++ 	invalid = 0,
++ 	md5     = 32771,
++ 	sha256  = 32780,
++ };
++ 
++-const algorithm all_algorithms[] = {algorithm::md5, algorithm::sha256};
+++const adu_algorithm all_adu_algorithms[] = {adu_algorithm::md5, adu_algorithm::sha256};
++ 
++ #ifndef USE_BCRYPT
++-int alg_to_gcrypt_algo(hashing::algorithm alg);
+++int alg_to_gcrypt_algo(hashing::adu_algorithm alg);
++ #endif
++ 
++-std::string get_algorithm_name(algorithm algo);
+++std::string get_algorithm_name(adu_algorithm algo);
++ 
++-size_t get_byte_count_for_algorithm(algorithm algo);
+++size_t get_byte_count_for_algorithm(adu_algorithm algo);
++ } // namespace archive_diff::hashing
++diff --git a/src/native/hashing/hash.cpp b/src/native/hashing/hash.cpp
++index 96e44be..adc0f46 100644
++--- a/src/native/hashing/hash.cpp
+++++ b/src/native/hashing/hash.cpp
++@@ -15,9 +15,9 @@
++ 
++ namespace archive_diff::hashing
++ {
++-hash::hash(algorithm algorithm, io::reader &reader) : m_algorithm(algorithm)
+++hash::hash(adu_algorithm algorithm, io::reader &reader) : m_algorithm(algorithm)
++ {
++-	hashing::hasher hasher{hashing::algorithm::sha256};
+++	hashing::hasher hasher{hashing::adu_algorithm::sha256};
++ 
++ 	auto remaining = reader.size();
++ 	uint64_t offset{};
++@@ -61,9 +61,9 @@ std::string hash::get_type_string() const
++ {
++ 	switch (m_algorithm)
++ 	{
++-	case algorithm::md5:
+++	case adu_algorithm::md5:
++ 		return std::string("Md5");
++-	case algorithm::sha256:
+++	case adu_algorithm::sha256:
++ 		return std::string("Sha256");
++ 	default:
++ 		std::string msg =
++@@ -99,7 +99,7 @@ void hash::verify_hashes_match(std::string_view actual, std::string_view expecte
++ 
++ void hash::verify_data_against_hash(std::string_view data, const hash &hash)
++ {
++-	hashing::hasher hasher(hashing::algorithm::sha256);
+++	hashing::hasher hasher(hashing::adu_algorithm::sha256);
++ 	hasher.hash_data(data.data(), data.size());
++ 	auto calculated_hash = hasher.get_hash_binary();
++ 
++diff --git a/src/native/hashing/hash.h b/src/native/hashing/hash.h
++index 973fd1f..bf74b9b 100644
++--- a/src/native/hashing/hash.h
+++++ b/src/native/hashing/hash.h
++@@ -28,10 +28,10 @@ namespace archive_diff::hashing
++ {
++ struct hash
++ {
++-	hash() : m_algorithm(algorithm::invalid) {}
++-	hash(algorithm algo, io::reader &reader);
+++	hash() : m_algorithm(adu_algorithm::invalid) {}
+++	hash(adu_algorithm algo, io::reader &reader);
++ 
++-	static hash import_hash_value(algorithm algo, std::string_view hash_value)
+++	static hash import_hash_value(adu_algorithm algo, std::string_view hash_value)
++ 	{
++ 		hash new_hash;
++ 		new_hash.m_algorithm = algo;
++@@ -76,7 +76,7 @@ struct hash
++ 	static void verify_hashes_match(std::string_view actual, std::string_view expected);
++ 	static void verify_data_against_hash(std::string_view data, const hash &hash);
++ 
++-	algorithm m_algorithm{algorithm::invalid};
+++	adu_algorithm m_algorithm{adu_algorithm::invalid};
++ 	std::vector<char> m_hash_data;
++ 
++ 	std::string get_type_string() const;
++diff --git a/src/native/hashing/hasher.cpp b/src/native/hashing/hasher.cpp
++index e4841d3..fcde5bf 100644
++--- a/src/native/hashing/hasher.cpp
+++++ b/src/native/hashing/hasher.cpp
++@@ -36,13 +36,13 @@ namespace archive_diff::hashing
++ {
++ #ifdef USE_BCRYPT
++ 
++-ALG_ID alg_to_BCRYPT_ALG_ID(algorithm alg)
+++ALG_ID alg_to_BCRYPT_ALG_ID(adu_algorithm alg)
++ {
++ 	switch (alg)
++ 	{
++-	case algorithm::md5:
+++	case adu_algorithm::md5:
++ 		return CALG_MD5;
++-	case algorithm::sha256:
+++	case adu_algorithm::sha256:
++ 		return CALG_SHA_256;
++ 	default:
++ 		std::string msg = "alg_to_BCRYPT_ALG_ID() has invalid value: " + std::to_string(static_cast<int>(alg));
++@@ -136,14 +136,14 @@ std::string gcrypt_algo_to_string(int algo)
++ #endif
++ 
++ #ifdef USE_OPENSSL
++-const EVP_MD *algorithm_to_EVP_MP(algorithm alg)
+++const EVP_MD *algorithm_to_EVP_MP(adu_algorithm alg)
++ { 
++ 	switch (alg)
++ 	{
++-	case algorithm::md5:
+++	case adu_algorithm::md5:
++ 		return EVP_md5();
++ 
++-	case algorithm::sha256:
+++	case adu_algorithm::sha256:
++ 		return EVP_sha256();
++ 
++ 	default:
++@@ -214,7 +214,7 @@ void hasher::reset()
++ #endif
++ }
++ 
++-hasher::hasher(algorithm alg) : m_alg(alg)
+++hasher::hasher(adu_algorithm alg) : m_alg(alg)
++ {
++ #ifdef USE_BCRYPT
++ 	#ifndef STATUS_SUCCESS
++diff --git a/src/native/hashing/hasher.h b/src/native/hashing/hasher.h
++index cd9bb14..d222fe6 100644
++--- a/src/native/hashing/hasher.h
+++++ b/src/native/hashing/hasher.h
++@@ -32,7 +32,7 @@ namespace archive_diff::hashing
++ class hasher
++ {
++ 	public:
++-	hasher(algorithm alg);
+++	hasher(adu_algorithm alg);
++ 	~hasher();
++ 	void reset();
++ 	int hash_data(std::span<char> data) { return hash_data(data.data(), data.size()); }
++@@ -49,7 +49,7 @@ class hasher
++ 	}
++ 
++ 	private:
++-	algorithm m_alg;
+++	adu_algorithm m_alg;
++ #ifdef USE_BCRYPT
++ 	struct algorithm_provider_handle_deleter
++ 	{
++diff --git a/src/native/io/hashed/gtest/io_hashed_gtest.cpp b/src/native/io/hashed/gtest/io_hashed_gtest.cpp
++index 9f8863e..ed11d65 100644
++--- a/src/native/io/hashed/gtest/io_hashed_gtest.cpp
+++++ b/src/native/io/hashed/gtest/io_hashed_gtest.cpp
++@@ -43,7 +43,7 @@ fs::path test_data_root;
++ 
++ std::vector<char> get_hash(const char *data, size_t length)
++ {
++-	archive_diff::hashing::hasher hasher(archive_diff::hashing::algorithm::sha256);
+++	archive_diff::hashing::hasher hasher(archive_diff::hashing::adu_algorithm::sha256);
++ 	std::string_view view{data, length};
++ 	hasher.hash_data(view);
++ 
++@@ -52,7 +52,7 @@ std::vector<char> get_hash(const char *data, size_t length)
++ 
++ std::vector<char> get_hash(archive_diff::io::reader *reader, uint64_t offset, uint64_t length)
++ {
++-	archive_diff::hashing::hasher hasher(archive_diff::hashing::algorithm::sha256);
+++	archive_diff::hashing::hasher hasher(archive_diff::hashing::adu_algorithm::sha256);
++ 	std::vector<char> buffer;
++ 	buffer.resize(32 * 1024);
++ 
++@@ -77,7 +77,7 @@ std::vector<char> get_hash(archive_diff::io::reader *reader, uint64_t offset, ui
++ 
++ std::vector<char> get_hash(fs::path path, uint64_t offset, uint64_t length)
++ {
++-	archive_diff::hashing::hasher hasher(archive_diff::hashing::algorithm::sha256);
+++	archive_diff::hashing::hasher hasher(archive_diff::hashing::adu_algorithm::sha256);
++ 
++ 	auto reader = archive_diff::io::file::io_device::make_reader(path.string());
++ 	return get_hash(&reader, offset, static_cast<size_t>(length));
++@@ -97,7 +97,7 @@ TEST(hashed_sequential_writer, binary_file_writer)
++ 
++ 	std::shared_ptr<archive_diff::io::writer> binary_writer =
++ 		std::make_shared<archive_diff::io::file::binary_file_writer>(test_file.string());
++-	auto hasher = std::make_shared<archive_diff::hashing::hasher>(archive_diff::hashing::algorithm::sha256);
+++	auto hasher = std::make_shared<archive_diff::hashing::hasher>(archive_diff::hashing::adu_algorithm::sha256);
++ 
++ 	archive_diff::io::hashed::hashed_sequential_writer hashed_writer(binary_writer, hasher);
++ 
++@@ -127,11 +127,11 @@ TEST(hashed_sequential_writer, child_hasher)
++ 
++ 	std::shared_ptr<archive_diff::io::writer> binary_writer =
++ 		std::make_shared<archive_diff::io::file::binary_file_writer>(test_file.string());
++-	auto hasher = std::make_shared<archive_diff::hashing::hasher>(archive_diff::hashing::algorithm::sha256);
+++	auto hasher = std::make_shared<archive_diff::hashing::hasher>(archive_diff::hashing::adu_algorithm::sha256);
++ 
++ 	archive_diff::io::hashed::hashed_sequential_writer hashed_writer(binary_writer, hasher);
++ 
++-	auto child_hasher = std::make_shared<archive_diff::hashing::hasher>(archive_diff::hashing::algorithm::sha256);
+++	auto child_hasher = std::make_shared<archive_diff::hashing::hasher>(archive_diff::hashing::adu_algorithm::sha256);
++ 
++ 	archive_diff::io::hashed::hashed_sequential_writer child_hashed_writer(hashed_writer, child_hasher);
++ 
++diff --git a/src/native/test_utility/buffer_helpers.cpp b/src/native/test_utility/buffer_helpers.cpp
++index 80504b2..e8cf8d0 100644
++--- a/src/native/test_utility/buffer_helpers.cpp
+++++ b/src/native/test_utility/buffer_helpers.cpp
++@@ -10,7 +10,7 @@
++ 
++ archive_diff::diffs::core::item_definition create_definition_from_data(std::string_view data)
++ {
++-	archive_diff::hashing::hasher hasher(archive_diff::hashing::algorithm::sha256);
+++	archive_diff::hashing::hasher hasher(archive_diff::hashing::adu_algorithm::sha256);
++ 
++ 	hasher.hash_data(data.data(), data.size());
++ 	auto hash = hasher.get_hash();
++diff --git a/src/native/tools/dumpextfs/load_ext4.cpp b/src/native/tools/dumpextfs/load_ext4.cpp
++index 1183bba..cbda566 100644
++--- a/src/native/tools/dumpextfs/load_ext4.cpp
+++++ b/src/native/tools/dumpextfs/load_ext4.cpp
++@@ -61,7 +61,7 @@ void get_file_hashes(const char *path, archive_details &details)
++ 
++ 	input.seekg(0, std::ios::beg);
++ 
++-	archive_diff::hashing::hasher sha256_hasher(archive_diff::hashing::algorithm::sha256);
+++	archive_diff::hashing::hasher sha256_hasher(archive_diff::hashing::adu_algorithm::sha256);
++ 
++ 	const size_t read_block_size = 4 * 1024;
++ 	char buffer[read_block_size];
++@@ -174,9 +174,9 @@ static int populate_file_details_from_inode(ext2_filsys fs, int ino, file_detail
++ 	__u64 offset           = std::numeric_limits<__u64>::max();
++ 	__u64 length           = 0;
++ 
++-	archive_diff::hashing::hasher hasher_sha256(archive_diff::hashing::algorithm::sha256);
+++	archive_diff::hashing::hasher hasher_sha256(archive_diff::hashing::adu_algorithm::sha256);
++ 
++-	archive_diff::hashing::hasher hasher_sha256_region(archive_diff::hashing::algorithm::sha256);
+++	archive_diff::hashing::hasher hasher_sha256_region(archive_diff::hashing::adu_algorithm::sha256);
++ 
++ 	while (read < file_size)
++ 	{
++diff --git a/src/native/tools/extract/extract.cpp b/src/native/tools/extract/extract.cpp
++index 88f3f87..ebf99c8 100644
++--- a/src/native/tools/extract/extract.cpp
+++++ b/src/native/tools/extract/extract.cpp
++@@ -140,7 +140,7 @@ void extract_items(
++ 	kitchen.clear_requested_items();
++ 	for (const auto &item : items)
++ 	{
++-		if (!item.has_hash_for_alg(archive_diff::hashing::algorithm::sha256))
+++		if (!item.has_hash_for_alg(archive_diff::hashing::adu_algorithm::sha256))
++ 		{
++ 			continue;
++ 		}
++@@ -149,7 +149,7 @@ void extract_items(
++ 		auto hashes = item.get_hashes();
++ 		for (const auto &hash : hashes)
++ 		{
++-			if (hash.first == archive_diff::hashing::algorithm::sha256)
+++			if (hash.first == archive_diff::hashing::adu_algorithm::sha256)
++ 			{
++ 				item_path        = target_path / hash.second.get_data_string();
++ 				item_paths[item] = item_path;
++@@ -240,7 +240,7 @@ int extract(fs::path source_path, fs::path diff_path, std::string hash, size_t s
++ 	}
++ 	std::string_view hash_view{hash_data.data(), hash_data.size()};
++ 	auto hash_value =
++-		archive_diff::hashing::hash::import_hash_value(archive_diff::hashing::algorithm::sha256, hash_view);
+++		archive_diff::hashing::hash::import_hash_value(archive_diff::hashing::adu_algorithm::sha256, hash_view);
++ 	item = item.with_hash(hash_value);
++ 	printf("Item: %s\n", item.to_string().c_str());
++ 
++diff --git a/src/native/tools/recompress/recompress.cpp b/src/native/tools/recompress/recompress.cpp
++index c8a3e40..fc16f3d 100644
++--- a/src/native/tools/recompress/recompress.cpp
+++++ b/src/native/tools/recompress/recompress.cpp
++@@ -120,7 +120,7 @@ bool compare_file_hashes(fs::path &file1, fs::path &file2, const std::string &ha
++ 
++ std::string get_filehash_string(fs::path &path)
++ {
++-	archive_diff::hashing::hasher hasher(archive_diff::hashing::algorithm::sha256);
+++	archive_diff::hashing::hasher hasher(archive_diff::hashing::adu_algorithm::sha256);
++ 
++ 	auto reader = archive_diff::io::file::io_device::make_reader(path.string());
++ 	archive_diff::io::sequential::basic_reader_wrapper seq(reader);
++diff --git a/src/native/tools/recompress/recompress_tool.cpp b/src/native/tools/recompress/recompress_tool.cpp
++index b2c4ccc..f26fb26 100644
++--- a/src/native/tools/recompress/recompress_tool.cpp
+++++ b/src/native/tools/recompress/recompress_tool.cpp
++@@ -179,7 +179,7 @@ std::string replace(const std::string &s, std::span<char> find_values, char repl
++ 
++ archive_diff::hashing::hash hash_reader(archive_diff::io::reader &reader)
++ {
++-	archive_diff::hashing::hasher hasher(archive_diff::hashing::algorithm::sha256);
+++	archive_diff::hashing::hasher hasher(archive_diff::hashing::adu_algorithm::sha256);
++ 
++ 	const size_t block_size = 8 * 1024;
++ 
++diff --git a/src/native/tools/zstd_compress_file/get_file_hash.cpp b/src/native/tools/zstd_compress_file/get_file_hash.cpp
++index 76f89b5..f427e53 100644
++--- a/src/native/tools/zstd_compress_file/get_file_hash.cpp
+++++ b/src/native/tools/zstd_compress_file/get_file_hash.cpp
++@@ -16,7 +16,7 @@ std::vector<char> get_file_hash(fs::path path)
++ 	auto reader = archive_diff::io::file::io_device::make_reader(path.string());
++ 	archive_diff::io::sequential::basic_reader_wrapper wrapped_reader(reader);
++ 
++-	archive_diff::hashing::hasher hasher(archive_diff::hashing::algorithm::sha256);
+++	archive_diff::hashing::hasher hasher(archive_diff::hashing::adu_algorithm::sha256);
++ 
++ 	const size_t block_size = 1024 * 1024;
++ 	std::vector<char> read_buffer;
++-- 
++2.34.1
++
+diff --git a/src/native/diffs/api/aduapi_type_conversion.cpp b/src/native/diffs/api/aduapi_type_conversion.cpp
+index 568bd73..4017eb2 100644
+--- a/src/native/diffs/api/aduapi_type_conversion.cpp
++++ b/src/native/diffs/api/aduapi_type_conversion.cpp
+@@ -6,14 +6,14 @@
+  */
+ #include "aduapi_type_conversion.h"
+ 
+-archive_diff::hashing::algorithm diffc_hash_type_to_algorithm(uint32_t type)
++archive_diff::hashing::hash_algorithm diffc_hash_type_to_algorithm(uint32_t type)
+ {
+ 	switch (static_cast<diffc_hash_type>(type))
+ 	{
+ 	case diffc_hash_type::diffc_hash_md5:
+-		return archive_diff::hashing::algorithm::md5;
++		return archive_diff::hashing::hash_hash_algorithm::md5;
+ 	case diffc_hash_type::diffc_hash_sha256:
+-		return archive_diff::hashing::algorithm::sha256;
++		return archive_diff::hashing::hash_hash_algorithm::sha256;
+ 	}
+ 	std::string msg = "Unexpected hash type: " + std::to_string(static_cast<int>(type));
+ 	throw archive_diff::errors::user_exception(archive_diff::errors::error_code::api_unexpected_hash_type, msg);
+diff --git a/src/native/diffs/api/aduapi_type_conversion.h b/src/native/diffs/api/aduapi_type_conversion.h
+index 4dc829e..8bf7d92 100644
+--- a/src/native/diffs/api/aduapi_type_conversion.h
++++ b/src/native/diffs/api/aduapi_type_conversion.h
+@@ -10,6 +10,6 @@
+ #include <hashing/algorithm.h>
+ #include <diffs/core/item_definition.h>
+ 
+-archive_diff::hashing::algorithm diffc_hash_type_to_algorithm(uint32_t type);
++archive_diff::hashing::hash_algorithm diffc_hash_type_to_algorithm(uint32_t type);
+ archive_diff::diffs::core::item_definition diffc_item_definition_to_core_item_definition(
+ 	const diffc_item_definition &diffc_item);
+\ No newline at end of file
+diff --git a/src/native/diffs/core/gtest/common.cpp b/src/native/diffs/core/gtest/common.cpp
+index 25290f9..b613d30 100644
+--- a/src/native/diffs/core/gtest/common.cpp
++++ b/src/native/diffs/core/gtest/common.cpp
+@@ -10,7 +10,7 @@
+ 
+ item_definition create_definition_from_data(std::vector<char> &data)
+ {
+-	archive_diff::hashing::hasher hasher(archive_diff::hashing::algorithm::sha256);
++	archive_diff::hashing::hasher hasher(archive_diff::hashing::hash_hash_algorithm::sha256);
+ 	hasher.hash_data(std::string_view{data.data(), data.capacity()});
+ 	auto hash = hasher.get_hash();
+ 
+diff --git a/src/native/diffs/core/gtest/test_item_definition.cpp b/src/native/diffs/core/gtest/test_item_definition.cpp
+index 07ba917..aaeb607 100644
+--- a/src/native/diffs/core/gtest/test_item_definition.cpp
++++ b/src/native/diffs/core/gtest/test_item_definition.cpp
+@@ -13,10 +13,10 @@ TEST(item_definition, operator_less_than_overload_starting_equivalent_items)
+ {
+ 	using item_definition = archive_diff::diffs::core::item_definition;
+ 
+-	archive_diff::hashing::hasher sha256(archive_diff::hashing::algorithm::sha256);
++	archive_diff::hashing::hasher sha256(archive_diff::hashing::hash_hash_algorithm::sha256);
+ 	auto hash1 = sha256.get_hash();
+ 
+-	archive_diff::hashing::hasher md5(archive_diff::hashing::algorithm::md5);
++	archive_diff::hashing::hasher md5(archive_diff::hashing::hash_hash_algorithm::md5);
+ 	auto hash2 = md5.get_hash();
+ 
+ 	// two items with no hashes (and same name) at construction and equal length should
+@@ -57,10 +57,10 @@ TEST(item_definition, operator_less_than_overload_starting_differing_sized_items
+ {
+ 	using item_definition = archive_diff::diffs::core::item_definition;
+ 
+-	archive_diff::hashing::hasher sha256(archive_diff::hashing::algorithm::sha256);
++	archive_diff::hashing::hasher sha256(archive_diff::hashing::hash_hash_algorithm::sha256);
+ 	auto hash1 = sha256.get_hash();
+ 
+-	archive_diff::hashing::hasher md5(archive_diff::hashing::algorithm::md5);
++	archive_diff::hashing::hasher md5(archive_diff::hashing::hash_hash_algorithm::md5);
+ 	auto hash2 = md5.get_hash();
+ 
+ 	// two items with no hashes (and same name) at construction, but first is smaller than second
+@@ -101,10 +101,10 @@ TEST(item_definition, match_starting_equivalent_items)
+ {
+ 	using item_definition = archive_diff::diffs::core::item_definition;
+ 
+-	archive_diff::hashing::hasher sha256(archive_diff::hashing::algorithm::sha256);
++	archive_diff::hashing::hasher sha256(archive_diff::hashing::hash_hash_algorithm::sha256);
+ 	auto hash1 = sha256.get_hash();
+ 
+-	archive_diff::hashing::hasher md5(archive_diff::hashing::algorithm::md5);
++	archive_diff::hashing::hasher md5(archive_diff::hashing::hash_hash_algorithm::md5);
+ 	auto hash2 = md5.get_hash();
+ 
+ 	// two items with no hashes (and same name) at construction and equal length should
+@@ -143,10 +143,10 @@ TEST(item_definition, match_starting_differing_sized_items)
+ {
+ 	using item_definition = archive_diff::diffs::core::item_definition;
+ 
+-	archive_diff::hashing::hasher sha256(archive_diff::hashing::algorithm::sha256);
++	archive_diff::hashing::hasher sha256(archive_diff::hashing::hash_hash_algorithm::sha256);
+ 	auto hash1 = sha256.get_hash();
+ 
+-	archive_diff::hashing::hasher md5(archive_diff::hashing::algorithm::md5);
++	archive_diff::hashing::hasher md5(archive_diff::hashing::hash_hash_algorithm::md5);
+ 	auto hash2 = md5.get_hash();
+ 
+ 	// two items with no hashes (and same name) at construction, but first is smaller than second
+@@ -188,10 +188,10 @@ TEST(item_definition, has_matching_hash)
+ {
+ 	using item_definition = archive_diff::diffs::core::item_definition;
+ 
+-	archive_diff::hashing::hasher sha256(archive_diff::hashing::algorithm::sha256);
++	archive_diff::hashing::hasher sha256(archive_diff::hashing::hash_hash_algorithm::sha256);
+ 	auto hash1 = sha256.get_hash();
+ 
+-	archive_diff::hashing::hasher md5(archive_diff::hashing::algorithm::md5);
++	archive_diff::hashing::hasher md5(archive_diff::hashing::hash_hash_algorithm::md5);
+ 	auto hash2 = md5.get_hash();
+ 
+ 	item_definition test_data[] = {
+@@ -228,10 +228,10 @@ TEST(item_definition, size)
+ {
+ 	using item_definition = archive_diff::diffs::core::item_definition;
+ 
+-	archive_diff::hashing::hasher sha256(archive_diff::hashing::algorithm::sha256);
++	archive_diff::hashing::hasher sha256(archive_diff::hashing::hash_hash_algorithm::sha256);
+ 	auto hash1 = sha256.get_hash();
+ 
+-	archive_diff::hashing::hasher md5(archive_diff::hashing::algorithm::md5);
++	archive_diff::hashing::hasher md5(archive_diff::hashing::hash_hash_algorithm::md5);
+ 	auto hash2 = md5.get_hash();
+ 
+ 	std::pair<item_definition, uint64_t> test_data[] = {
+diff --git a/src/native/diffs/core/item_definition.cpp b/src/native/diffs/core/item_definition.cpp
+index 3efabf1..64fb5e8 100644
+--- a/src/native/diffs/core/item_definition.cpp
++++ b/src/native/diffs/core/item_definition.cpp
+@@ -26,7 +26,7 @@ bool item_definition::operator<(const item_definition &rhs) const
+ 		return m_hashes.size() < rhs.m_hashes.size();
+ 	}
+ 
+-	for (auto algorithm : hashing::all_algorithms)
++	for (auto algorithm : hashing::all_hash_algorithms)
+ 	{
+ 		bool left_has_hash  = m_hashes.count(algorithm) > 0;
+ 		bool right_has_hash = rhs.m_hashes.count(algorithm) > 0;
+@@ -78,7 +78,7 @@ bool item_definition::operator==(const item_definition &rhs) const
+ 		return false;
+ 	}
+ 
+-	for (auto algorithm : hashing::all_algorithms)
++	for (auto algorithm : hashing::all_hash_algorithms)
+ 	{
+ 		bool left_has_hash  = m_hashes.count(algorithm) > 0;
+ 		bool right_has_hash = rhs.m_hashes.count(algorithm) > 0;
+@@ -178,7 +178,7 @@ item_definition::match_result item_definition::match(const item_definition &rhs)
+ 		return match_result::no_match;
+ 	}
+ 
+-	for (auto algorithm : hashing::all_algorithms)
++	for (auto algorithm : hashing::all_hash_algorithms)
+ 	{
+ 		bool left_has_hash  = m_hashes.count(algorithm) > 0;
+ 		bool right_has_hash = rhs.m_hashes.count(algorithm) > 0;
+@@ -282,7 +282,7 @@ void item_definition::write(io::sequential::writer &writer, serialization_option
+ 	{
+ 		if (include_only_sha256_hash)
+ 		{
+-			auto itr = m_hashes.find(hashing::algorithm::sha256);
++			auto itr = m_hashes.find(hashing::hash_hash_algorithm::sha256);
+ 
+ 			if (itr == m_hashes.cend())
+ 			{
+diff --git a/src/native/diffs/core/item_definition.h b/src/native/diffs/core/item_definition.h
+index 27302cb..556ccf5 100644
+--- a/src/native/diffs/core/item_definition.h
++++ b/src/native/diffs/core/item_definition.h
+@@ -51,14 +51,14 @@ class item_definition
+ 	[[nodiscard]] item_definition with_hash(const hashing::hash &hash) const;
+ 
+ 	using item_names_set  = std::set<std::string>;
+-	using item_hashes_map = std::map<hashing::algorithm, hashing::hash>;
++	using item_hashes_map = std::map<hashing::hash_algorithm, hashing::hash>;
+ 
+ 	const item_hashes_map &get_hashes() const { return m_hashes; }
+ 	const item_names_set &get_names() const { return m_names; }
+ 
+ 	bool has_matching_hash(hashing::hash &hash) const;
+ 	bool has_matching_name(const std::string &name) const { return m_names.count(name) > 0; }
+-	bool has_hash_for_alg(hashing::algorithm algo) const { return m_hashes.count(algo) > 0; }
++	bool has_hash_for_alg(hashing::hash_hash_algorithm algo) const { return m_hashes.count(algo) > 0; }
+ 	bool has_any_hashes() const { return !m_hashes.empty(); }
+ 
+ 	uint64_t size() const { return m_length; }
+diff --git a/src/native/diffs/core/item_definition_helpers.cpp b/src/native/diffs/core/item_definition_helpers.cpp
+index 85adb21..416c05e 100644
+--- a/src/native/diffs/core/item_definition_helpers.cpp
++++ b/src/native/diffs/core/item_definition_helpers.cpp
+@@ -17,7 +17,7 @@ item_definition create_definition_from_span(const std::span<char> data)
+ 
+ item_definition create_definition_from_string_view(std::string_view data)
+ {
+-	hashing::hasher hasher(hashing::algorithm::sha256);
++	hashing::hasher hasher(hashing::hash_hash_algorithm::sha256);
+ 
+ 	hasher.hash_data(data.data(), data.size());
+ 	auto hash = hasher.get_hash();
+@@ -37,7 +37,7 @@ item_definition create_definition_from_vector_using_size(std::vector<char> &data
+ 
+ item_definition create_definition_from_reader(io::reader &reader)
+ {
+-	hashing::hasher hasher(hashing::algorithm::sha256);
++	hashing::hasher hasher(hashing::hash_hash_algorithm::sha256);
+ 
+ 	const size_t block_size = 8 * 1024;
+ 
+@@ -62,7 +62,7 @@ item_definition create_definition_from_reader(io::reader &reader)
+ 
+ item_definition create_definition_from_sequential_reader(io::sequential::reader *reader)
+ {
+-	hashing::hasher hasher(hashing::algorithm::sha256);
++	hashing::hasher hasher(hashing::hash_hash_algorithm::sha256);
+ 
+ 	const size_t block_size = 8 * 1024;
+ 
+diff --git a/src/native/diffs/core/prepared_item.cpp b/src/native/diffs/core/prepared_item.cpp
+index 226a807..f6964d8 100644
+--- a/src/native/diffs/core/prepared_item.cpp
++++ b/src/native/diffs/core/prepared_item.cpp
+@@ -198,7 +198,7 @@ void prepared_item::write([[maybe_unused]] std::shared_ptr<io::writer> &writer)
+ {
+ 	auto reader = make_sequential_reader();
+ #if 0
+-	auto hasher = std::make_shared<hashing::hasher>(hashing::algorithm::sha256);
++	auto hasher = std::make_shared<hashing::hasher>(hashing::hash_hash_algorithm::sha256);
+ 	io::hashed::hashed_sequential_writer hashed_writer(writer, hasher);
+ 
+ 	hashed_writer.write(*reader);
+diff --git a/src/native/diffs/core/slicer.cpp b/src/native/diffs/core/slicer.cpp
+index c7e54df..b50817c 100644
+--- a/src/native/diffs/core/slicer.cpp
++++ b/src/native/diffs/core/slicer.cpp
+@@ -346,7 +346,7 @@ void slicer::slice_and_populate_slice_store(const item_definition &item_to_slice
+ 	auto reader = prepared_item_to_slice->make_sequential_reader();
+ 
+ 	// printf("We're slicing %s\n", item_to_slice.to_string().c_str());
+-	hashing::hasher hasher(hashing::algorithm::sha256);
++	hashing::hasher hasher(hashing::hash_hash_algorithm::sha256);
+ 
+ 	for (auto offset_and_slice : *slices_requested)
+ 	{
+diff --git a/src/native/diffs/recipes/basic/gtest/common.cpp b/src/native/diffs/recipes/basic/gtest/common.cpp
+index 25290f9..b613d30 100644
+--- a/src/native/diffs/recipes/basic/gtest/common.cpp
++++ b/src/native/diffs/recipes/basic/gtest/common.cpp
+@@ -10,7 +10,7 @@
+ 
+ item_definition create_definition_from_data(std::vector<char> &data)
+ {
+-	archive_diff::hashing::hasher hasher(archive_diff::hashing::algorithm::sha256);
++	archive_diff::hashing::hasher hasher(archive_diff::hashing::hash_hash_algorithm::sha256);
+ 	hasher.hash_data(std::string_view{data.data(), data.capacity()});
+ 	auto hash = hasher.get_hash();
+ 
+diff --git a/src/native/diffs/recipes/basic/gtest/inline_asset_recipe_tests.cpp b/src/native/diffs/recipes/basic/gtest/inline_asset_recipe_tests.cpp
+index 62aa504..17f8bbf 100644
+--- a/src/native/diffs/recipes/basic/gtest/inline_asset_recipe_tests.cpp
++++ b/src/native/diffs/recipes/basic/gtest/inline_asset_recipe_tests.cpp
+@@ -26,7 +26,7 @@ TEST(inline_asset_recipe, make_reader)
+ 		{
+ 			auto expected_data = std::string_view{c_test_inline_asset_data + offset, length};
+ 
+-			archive_diff::hashing::hasher hasher(archive_diff::hashing::algorithm::sha256);
++			archive_diff::hashing::hasher hasher(archive_diff::hashing::hash_hash_algorithm::sha256);
+ 			hasher.hash_data(expected_data);
+ 
+ 			archive_diff::diffs::blob_definition blobdef;
+@@ -46,7 +46,7 @@ TEST(inline_asset_recipe, make_reader)
+ 			ASSERT_EQ(recipe_result_data.size(), expected_data.size());
+ 			ASSERT_EQ(0, memcmp(recipe_result_data.data(), expected_data.data(), expected_data.size()));
+ 
+-			archive_diff::hashing::hasher result_hasher(archive_diff::hashing::algorithm::sha256);
++			archive_diff::hashing::hasher result_hasher(archive_diff::hashing::hash_hash_algorithm::sha256);
+ 			result_hasher.hash_data(recipe_result_data);
+ 
+ 			archive_diff::hashing::hash::verify_hashes_match(expected_hash, result_hasher.get_hash());
+@@ -72,7 +72,7 @@ TEST(inline_asset_recipe, apply)
+ 		{
+ 			auto expected_data = std::string_view{c_test_inline_asset_data + offset, length};
+ 
+-			archive_diff::hashing::hasher hasher(archive_diff::hashing::algorithm::sha256);
++			archive_diff::hashing::hasher hasher(archive_diff::hashing::hash_hash_algorithm::sha256);
+ 			hasher.hash_data(expected_data);
+ 
+ 			archive_diff::diffs::blob_definition blobdef;
+@@ -88,7 +88,7 @@ TEST(inline_asset_recipe, apply)
+ 			std::shared_ptr<archive_diff::io::writer> buffer_writer =
+ 				std::make_shared<archive_diff::io::buffer::writer>(write_result_buffer);
+ 			auto write_result_hasher =
+-				std::make_shared<archive_diff::hashing::hasher>(archive_diff::hashing::algorithm::sha256);
++				std::make_shared<archive_diff::hashing::hasher>(archive_diff::hashing::hash_hash_algorithm::sha256);
+ 			archive_diff::io::hashed::hashed_sequential_writer hashed_writer(buffer_writer, write_result_hasher);
+ 
+ 			recipe.apply(&context, hashed_writer);
+@@ -96,7 +96,7 @@ TEST(inline_asset_recipe, apply)
+ 			ASSERT_EQ(write_result_buffer->size(), expected_data.size());
+ 			ASSERT_EQ(0, std::memcmp(write_result_buffer->data(), expected_data.data(), expected_data.size()));
+ 
+-			archive_diff::hashing::hasher result_hasher(archive_diff::hashing::algorithm::sha256);
++			archive_diff::hashing::hasher result_hasher(archive_diff::hashing::hash_hash_algorithm::sha256);
+ 			result_hasher.hash_data(*write_result_buffer);
+ 
+ 			archive_diff::hashing::hash::verify_hashes_match(expected_hash, result_hasher.get_hash());
+@@ -116,7 +116,7 @@ TEST(inline_asset_recipe, no_inline_assets)
+ 		{
+ 			auto expected_data = std::string_view{c_test_inline_asset_data + offset, length};
+ 
+-			archive_diff::hashing::hasher hasher(archive_diff::hashing::algorithm::sha256);
++			archive_diff::hashing::hasher hasher(archive_diff::hashing::hash_hash_algorithm::sha256);
+ 			hasher.hash_data(expected_data);
+ 
+ 			archive_diff::diffs::blob_definition blobdef;
+@@ -151,7 +151,7 @@ TEST(inline_asset_recipe, make_reader_buggy_result_bad_hash)
+ 		{
+ 			auto expected_data = std::string_view{c_test_inline_asset_data + offset, length};
+ 
+-			archive_diff::hashing::hasher hasher(archive_diff::hashing::algorithm::sha256);
++			archive_diff::hashing::hasher hasher(archive_diff::hashing::hash_hash_algorithm::sha256);
+ 			hasher.hash_data(expected_data);
+ 
+ 			archive_diff::diffs::blob_definition blobdef;
+@@ -173,7 +173,7 @@ TEST(inline_asset_recipe, make_reader_buggy_result_bad_hash)
+ 				ASSERT_NE(0, memcmp(buggy_recipe_result_data.data(), expected_data.data(), expected_data.size()));
+ 			}
+ 
+-			archive_diff::hashing::hasher buggy_result_hasher(archive_diff::hashing::algorithm::sha256);
++			archive_diff::hashing::hasher buggy_result_hasher(archive_diff::hashing::hash_hash_algorithm::sha256);
+ 			buggy_result_hasher.hash_data(buggy_recipe_result_data);
+ 
+ 			bool caught_exception = false;
+@@ -210,7 +210,7 @@ TEST(inline_asset_recipe, apply_buggy_result_bad_hash)
+ 		{
+ 			auto expected_data = std::string_view{c_test_inline_asset_data + offset, length};
+ 
+-			archive_diff::hashing::hasher hasher(archive_diff::hashing::algorithm::sha256);
++			archive_diff::hashing::hasher hasher(archive_diff::hashing::hash_hash_algorithm::sha256);
+ 			hasher.hash_data(expected_data);
+ 
+ 			archive_diff::diffs::blob_definition blobdef;
+@@ -226,7 +226,7 @@ TEST(inline_asset_recipe, apply_buggy_result_bad_hash)
+ 			std::shared_ptr<archive_diff::io::writer> buffer_writer =
+ 				std::make_shared<archive_diff::io::buffer::writer>(write_result_buffer);
+ 			auto write_result_hasher =
+-				std::make_shared<archive_diff::hashing::hasher>(archive_diff::hashing::algorithm::sha256);
++				std::make_shared<archive_diff::hashing::hasher>(archive_diff::hashing::hash_hash_algorithm::sha256);
+ 
+ 			archive_diff::io::hashed::hashed_sequential_writer hashed_writer(buffer_writer, write_result_hasher);
+ 
+@@ -237,7 +237,7 @@ TEST(inline_asset_recipe, apply_buggy_result_bad_hash)
+ 				ASSERT_NE(0, std::memcmp(write_result_buffer->data(), expected_data.data(), expected_data.size()));
+ 			}
+ 
+-			archive_diff::hashing::hasher result_hasher(archive_diff::hashing::algorithm::sha256);
++			archive_diff::hashing::hasher result_hasher(archive_diff::hashing::hash_hash_algorithm::sha256);
+ 			result_hasher.hash_data(*write_result_buffer);
+ 
+ 			bool caught_exception = false;
+diff --git a/src/native/diffs/recipes/basic/gtest/test_all_zeros_recipe.cpp b/src/native/diffs/recipes/basic/gtest/test_all_zeros_recipe.cpp
+index 54504b4..44c5cf3 100644
+--- a/src/native/diffs/recipes/basic/gtest/test_all_zeros_recipe.cpp
++++ b/src/native/diffs/recipes/basic/gtest/test_all_zeros_recipe.cpp
+@@ -31,7 +31,7 @@ void test_all_zero_reader(
+ 	ASSERT_EQ(result_data.size(), expected_data.size());
+ 	ASSERT_EQ(0, std::memcmp(result_data.data(), expected_data.data(), expected_data.size()));
+ 
+-	archive_diff::hashing::hasher result_hasher(archive_diff::hashing::algorithm::sha256);
++	archive_diff::hashing::hasher result_hasher(archive_diff::hashing::hash_hash_algorithm::sha256);
+ 	result_hasher.hash_data(result_data);
+ 	auto actual_hash = result_hasher.get_hash();
+ 
+@@ -53,7 +53,7 @@ void test_all_zero_sequential_reader(
+ 	ASSERT_EQ(result_data.size(), expected_data.size());
+ 	ASSERT_EQ(0, std::memcmp(result_data.data(), expected_data.data(), expected_data.size()));
+ 
+-	archive_diff::hashing::hasher result_hasher(archive_diff::hashing::algorithm::sha256);
++	archive_diff::hashing::hasher result_hasher(archive_diff::hashing::hash_hash_algorithm::sha256);
+ 	result_hasher.hash_data(result_data);
+ 	auto actual_hash = result_hasher.get_hash();
+ 
+@@ -66,7 +66,7 @@ TEST(zeros_io_device, make_reader)
+ 	{
+ 		std::vector<char> expected_data;
+ 		expected_data.resize(num_zeros);
+-		archive_diff::hashing::hasher hasher(archive_diff::hashing::algorithm::sha256);
++		archive_diff::hashing::hasher hasher(archive_diff::hashing::hash_hash_algorithm::sha256);
+ 		hasher.hash_data(expected_data);
+ 		auto expected_hash = hasher.get_hash();
+ 
+@@ -82,7 +82,7 @@ TEST(all_zero_recipe, prepare)
+ 	{
+ 		std::vector<char> expected_data;
+ 		expected_data.resize(num_zeros);
+-		archive_diff::hashing::hasher hasher(archive_diff::hashing::algorithm::sha256);
++		archive_diff::hashing::hasher hasher(archive_diff::hashing::hash_hash_algorithm::sha256);
+ 		hasher.hash_data(expected_data);
+ 		auto expected_hash = hasher.get_hash();
+ 
+@@ -119,7 +119,7 @@ TEST(all_zero_recipe_template, make_reader)
+ 	{
+ 		std::vector<char> expected_data;
+ 		expected_data.resize(num_zeros);
+-		archive_diff::hashing::hasher hasher(archive_diff::hashing::algorithm::sha256);
++		archive_diff::hashing::hasher hasher(archive_diff::hashing::hash_hash_algorithm::sha256);
+ 		hasher.hash_data(expected_data);
+ 		auto expected_hash = hasher.get_hash();
+ 
+@@ -159,7 +159,7 @@ TEST(all_zero_recipe, fetch_from_kitchen)
+ 	{
+ 		std::vector<char> expected_data;
+ 		expected_data.resize(num_zeros);
+-		archive_diff::hashing::hasher hasher(archive_diff::hashing::algorithm::sha256);
++		archive_diff::hashing::hasher hasher(archive_diff::hashing::hash_hash_algorithm::sha256);
+ 		hasher.hash_data(expected_data);
+ 		auto expected_hash = hasher.get_hash();
+ 
+diff --git a/src/native/diffs/serialization/standard/deserializer.cpp b/src/native/diffs/serialization/standard/deserializer.cpp
+index 17077c7..da7d124 100644
+--- a/src/native/diffs/serialization/standard/deserializer.cpp
++++ b/src/native/diffs/serialization/standard/deserializer.cpp
+@@ -347,7 +347,7 @@ void deserializer::add_nested_archive(const std::string &path)
+ 	auto reader            = io::file::io_device::make_reader(path);
+ 	auto archive_data_size = reader.size();
+ 
+-	hashing::hash archive_data_hash{hashing::algorithm::sha256, reader};
++	hashing::hash archive_data_hash{hashing::hash_hash_algorithm::sha256, reader};
+ 	auto archive_data_item = core::item_definition{archive_data_size}.with_hash(archive_data_hash);
+ 
+ 	deserializer nested;
+diff --git a/src/native/diffs/serialization/standard/serializer.cpp b/src/native/diffs/serialization/standard/serializer.cpp
+index e32ebc5..6a4e3db 100644
+--- a/src/native/diffs/serialization/standard/serializer.cpp
++++ b/src/native/diffs/serialization/standard/serializer.cpp
+@@ -155,7 +155,7 @@ void serializer::write_nested_archives(io::sequential::writer &writer)
+ 	{
+ 		auto serialized_diff                      = std::make_shared<std::vector<char>>();
+ 		std::shared_ptr<io::writer> buffer_writer = std::make_shared<io::buffer::writer>(serialized_diff);
+-		auto hasher                               = std::make_shared<hashing::hasher>(hashing::algorithm::sha256);
++		auto hasher                               = std::make_shared<hashing::hasher>(hashing::hash_hash_algorithm::sha256);
+ 		io::hashed::hashed_sequential_writer seq(buffer_writer, hasher);
+ 
+ 		serializer nested(archive);
+diff --git a/src/native/hashing/algorithm.cpp b/src/native/hashing/algorithm.cpp
+index 904bbd7..7c84b21 100644
+--- a/src/native/hashing/algorithm.cpp
++++ b/src/native/hashing/algorithm.cpp
+@@ -13,13 +13,13 @@
+ 
+ namespace archive_diff::hashing
+ {
+-size_t get_byte_count_for_algorithm(algorithm algo)
++size_t get_byte_count_for_algorithm(hash_algorithm algo)
+ {
+ 	switch (algo)
+ 	{
+-	case algorithm::md5:
++	case hash_algorithm::md5:
+ 		return 16;
+-	case algorithm::sha256:
++	case hash_algorithm::sha256:
+ 		return 32;
+ 	default:
+ 		std::string msg = "diffs::hash::get_byte_count_for_algorithm(): Unexpected hash type: "
+@@ -28,13 +28,13 @@ size_t get_byte_count_for_algorithm(algorithm algo)
+ 	}
+ }
+ 
+-std::string get_algorithm_name(algorithm algo)
++std::string get_algorithm_name(hash_algorithm algo)
+ {
+ 	switch (algo)
+ 	{
+-	case algorithm::md5:
++	case hash_algorithm::md5:
+ 		return "md5";
+-	case algorithm::sha256:
++	case hash_algorithm::sha256:
+ 		return "sha256";
+ 	default:
+ 		std::string msg =
+@@ -44,13 +44,13 @@ std::string get_algorithm_name(algorithm algo)
+ }
+ 
+ #ifdef USE_LIBGCRYPT
+-int alg_to_gcrypt_algo(hashing::algorithm alg)
++int alg_to_gcrypt_algo(hashing::hash_algorithm alg)
+ {
+ 	switch (alg)
+ 	{
+-	case hashing::algorithm::md5:
++	case hashing::hash_hash_algorithm::md5:
+ 		return GCRY_MD_MD5;
+-	case hashing::algorithm::sha256:
++	case hashing::hash_hash_algorithm::sha256:
+ 		return GCRY_MD_SHA256;
+ 	default:
+ 		std::string msg = "alg_to_gcrypt_algo() has invalid value: " + std::to_string(static_cast<int>(alg));
+diff --git a/src/native/hashing/algorithm.h b/src/native/hashing/algorithm.h
+index 485e18d..db00c98 100644
+--- a/src/native/hashing/algorithm.h
++++ b/src/native/hashing/algorithm.h
+@@ -20,20 +20,20 @@
+ 
+ namespace archive_diff::hashing
+ {
+-enum class algorithm : uint32_t
++enum class hash_algorithm : uint32_t
+ {
+ 	invalid = 0,
+ 	md5     = 32771,
+ 	sha256  = 32780,
+ };
+ 
+-const algorithm all_algorithms[] = {algorithm::md5, algorithm::sha256};
++const hash_algorithm all_hash_algorithms[] = {hash_algorithm::md5, hash_algorithm::sha256};
+ 
+ #ifndef USE_BCRYPT
+-int alg_to_gcrypt_algo(hashing::algorithm alg);
++int alg_to_gcrypt_algo(hashing::hash_algorithm alg);
+ #endif
+ 
+-std::string get_algorithm_name(algorithm algo);
++std::string get_algorithm_name(hash_algorithm algo);
+ 
+-size_t get_byte_count_for_algorithm(algorithm algo);
++size_t get_byte_count_for_algorithm(hash_algorithm algo);
+ } // namespace archive_diff::hashing
+diff --git a/src/native/hashing/hash.cpp b/src/native/hashing/hash.cpp
+index 96e44be..3030884 100644
+--- a/src/native/hashing/hash.cpp
++++ b/src/native/hashing/hash.cpp
+@@ -15,9 +15,9 @@
+ 
+ namespace archive_diff::hashing
+ {
+-hash::hash(algorithm algorithm, io::reader &reader) : m_algorithm(algorithm)
++hash::hash(hash_algorithm algorithm, io::reader &reader) : m_algorithm(algorithm)
+ {
+-	hashing::hasher hasher{hashing::algorithm::sha256};
++	hashing::hasher hasher{hashing::hash_hash_algorithm::sha256};
+ 
+ 	auto remaining = reader.size();
+ 	uint64_t offset{};
+@@ -61,9 +61,9 @@ std::string hash::get_type_string() const
+ {
+ 	switch (m_algorithm)
+ 	{
+-	case algorithm::md5:
++	case hash_algorithm::md5:
+ 		return std::string("Md5");
+-	case algorithm::sha256:
++	case hash_algorithm::sha256:
+ 		return std::string("Sha256");
+ 	default:
+ 		std::string msg =
+@@ -99,7 +99,7 @@ void hash::verify_hashes_match(std::string_view actual, std::string_view expecte
+ 
+ void hash::verify_data_against_hash(std::string_view data, const hash &hash)
+ {
+-	hashing::hasher hasher(hashing::algorithm::sha256);
++	hashing::hasher hasher(hashing::hash_hash_algorithm::sha256);
+ 	hasher.hash_data(data.data(), data.size());
+ 	auto calculated_hash = hasher.get_hash_binary();
+ 
+diff --git a/src/native/hashing/hash.h b/src/native/hashing/hash.h
+index 973fd1f..b3f51dd 100644
+--- a/src/native/hashing/hash.h
++++ b/src/native/hashing/hash.h
+@@ -28,10 +28,10 @@ namespace archive_diff::hashing
+ {
+ struct hash
+ {
+-	hash() : m_algorithm(algorithm::invalid) {}
+-	hash(algorithm algo, io::reader &reader);
++	hash() : m_algorithm(hash_algorithm::invalid) {}
++	hash(hash_algorithm algo, io::reader &reader);
+ 
+-	static hash import_hash_value(algorithm algo, std::string_view hash_value)
++	static hash import_hash_value(hash_algorithm algo, std::string_view hash_value)
+ 	{
+ 		hash new_hash;
+ 		new_hash.m_algorithm = algo;
+@@ -76,7 +76,7 @@ struct hash
+ 	static void verify_hashes_match(std::string_view actual, std::string_view expected);
+ 	static void verify_data_against_hash(std::string_view data, const hash &hash);
+ 
+-	algorithm m_algorithm{algorithm::invalid};
++	hash_hash_algorithm m_algorithm{hash_algorithm::invalid};
+ 	std::vector<char> m_hash_data;
+ 
+ 	std::string get_type_string() const;
+diff --git a/src/native/hashing/hasher.cpp b/src/native/hashing/hasher.cpp
+index e4841d3..f5a3db0 100644
+--- a/src/native/hashing/hasher.cpp
++++ b/src/native/hashing/hasher.cpp
+@@ -40,9 +40,9 @@ ALG_ID alg_to_BCRYPT_ALG_ID(algorithm alg)
+ {
+ 	switch (alg)
+ 	{
+-	case algorithm::md5:
++	case hash_algorithm::md5:
+ 		return CALG_MD5;
+-	case algorithm::sha256:
++	case hash_algorithm::sha256:
+ 		return CALG_SHA_256;
+ 	default:
+ 		std::string msg = "alg_to_BCRYPT_ALG_ID() has invalid value: " + std::to_string(static_cast<int>(alg));
+@@ -140,10 +140,10 @@ const EVP_MD *algorithm_to_EVP_MP(algorithm alg)
+ { 
+ 	switch (alg)
+ 	{
+-	case algorithm::md5:
++	case hash_algorithm::md5:
+ 		return EVP_md5();
+ 
+-	case algorithm::sha256:
++	case hash_algorithm::sha256:
+ 		return EVP_sha256();
+ 
+ 	default:
+diff --git a/src/native/hashing/hasher.h b/src/native/hashing/hasher.h
+index cd9bb14..efa4277 100644
+--- a/src/native/hashing/hasher.h
++++ b/src/native/hashing/hasher.h
+@@ -49,7 +49,7 @@ class hasher
+ 	}
+ 
+ 	private:
+-	algorithm m_alg;
++	hash_algorithm m_alg;
+ #ifdef USE_BCRYPT
+ 	struct algorithm_provider_handle_deleter
+ 	{
+diff --git a/src/native/io/hashed/gtest/io_hashed_gtest.cpp b/src/native/io/hashed/gtest/io_hashed_gtest.cpp
+index 9f8863e..0bcdd65 100644
+--- a/src/native/io/hashed/gtest/io_hashed_gtest.cpp
++++ b/src/native/io/hashed/gtest/io_hashed_gtest.cpp
+@@ -43,7 +43,7 @@ fs::path test_data_root;
+ 
+ std::vector<char> get_hash(const char *data, size_t length)
+ {
+-	archive_diff::hashing::hasher hasher(archive_diff::hashing::algorithm::sha256);
++	archive_diff::hashing::hasher hasher(archive_diff::hashing::hash_hash_algorithm::sha256);
+ 	std::string_view view{data, length};
+ 	hasher.hash_data(view);
+ 
+@@ -52,7 +52,7 @@ std::vector<char> get_hash(const char *data, size_t length)
+ 
+ std::vector<char> get_hash(archive_diff::io::reader *reader, uint64_t offset, uint64_t length)
+ {
+-	archive_diff::hashing::hasher hasher(archive_diff::hashing::algorithm::sha256);
++	archive_diff::hashing::hasher hasher(archive_diff::hashing::hash_hash_algorithm::sha256);
+ 	std::vector<char> buffer;
+ 	buffer.resize(32 * 1024);
+ 
+@@ -77,7 +77,7 @@ std::vector<char> get_hash(archive_diff::io::reader *reader, uint64_t offset, ui
+ 
+ std::vector<char> get_hash(fs::path path, uint64_t offset, uint64_t length)
+ {
+-	archive_diff::hashing::hasher hasher(archive_diff::hashing::algorithm::sha256);
++	archive_diff::hashing::hasher hasher(archive_diff::hashing::hash_hash_algorithm::sha256);
+ 
+ 	auto reader = archive_diff::io::file::io_device::make_reader(path.string());
+ 	return get_hash(&reader, offset, static_cast<size_t>(length));
+@@ -97,7 +97,7 @@ TEST(hashed_sequential_writer, binary_file_writer)
+ 
+ 	std::shared_ptr<archive_diff::io::writer> binary_writer =
+ 		std::make_shared<archive_diff::io::file::binary_file_writer>(test_file.string());
+-	auto hasher = std::make_shared<archive_diff::hashing::hasher>(archive_diff::hashing::algorithm::sha256);
++	auto hasher = std::make_shared<archive_diff::hashing::hasher>(archive_diff::hashing::hash_hash_algorithm::sha256);
+ 
+ 	archive_diff::io::hashed::hashed_sequential_writer hashed_writer(binary_writer, hasher);
+ 
+@@ -127,11 +127,11 @@ TEST(hashed_sequential_writer, child_hasher)
+ 
+ 	std::shared_ptr<archive_diff::io::writer> binary_writer =
+ 		std::make_shared<archive_diff::io::file::binary_file_writer>(test_file.string());
+-	auto hasher = std::make_shared<archive_diff::hashing::hasher>(archive_diff::hashing::algorithm::sha256);
++	auto hasher = std::make_shared<archive_diff::hashing::hasher>(archive_diff::hashing::hash_hash_algorithm::sha256);
+ 
+ 	archive_diff::io::hashed::hashed_sequential_writer hashed_writer(binary_writer, hasher);
+ 
+-	auto child_hasher = std::make_shared<archive_diff::hashing::hasher>(archive_diff::hashing::algorithm::sha256);
++	auto child_hasher = std::make_shared<archive_diff::hashing::hasher>(archive_diff::hashing::hash_hash_algorithm::sha256);
+ 
+ 	archive_diff::io::hashed::hashed_sequential_writer child_hashed_writer(hashed_writer, child_hasher);
+ 
+diff --git a/src/native/test_utility/buffer_helpers.cpp b/src/native/test_utility/buffer_helpers.cpp
+index 80504b2..f5ea068 100644
+--- a/src/native/test_utility/buffer_helpers.cpp
++++ b/src/native/test_utility/buffer_helpers.cpp
+@@ -10,7 +10,7 @@
+ 
+ archive_diff::diffs::core::item_definition create_definition_from_data(std::string_view data)
+ {
+-	archive_diff::hashing::hasher hasher(archive_diff::hashing::algorithm::sha256);
++	archive_diff::hashing::hasher hasher(archive_diff::hashing::hash_hash_algorithm::sha256);
+ 
+ 	hasher.hash_data(data.data(), data.size());
+ 	auto hash = hasher.get_hash();
+diff --git a/src/native/tools/dumpextfs/load_ext4.cpp b/src/native/tools/dumpextfs/load_ext4.cpp
+index 1183bba..b683018 100644
+--- a/src/native/tools/dumpextfs/load_ext4.cpp
++++ b/src/native/tools/dumpextfs/load_ext4.cpp
+@@ -61,7 +61,7 @@ void get_file_hashes(const char *path, archive_details &details)
+ 
+ 	input.seekg(0, std::ios::beg);
+ 
+-	archive_diff::hashing::hasher sha256_hasher(archive_diff::hashing::algorithm::sha256);
++	archive_diff::hashing::hasher sha256_hasher(archive_diff::hashing::hash_hash_algorithm::sha256);
+ 
+ 	const size_t read_block_size = 4 * 1024;
+ 	char buffer[read_block_size];
+@@ -174,9 +174,9 @@ static int populate_file_details_from_inode(ext2_filsys fs, int ino, file_detail
+ 	__u64 offset           = std::numeric_limits<__u64>::max();
+ 	__u64 length           = 0;
+ 
+-	archive_diff::hashing::hasher hasher_sha256(archive_diff::hashing::algorithm::sha256);
++	archive_diff::hashing::hasher hasher_sha256(archive_diff::hashing::hash_hash_algorithm::sha256);
+ 
+-	archive_diff::hashing::hasher hasher_sha256_region(archive_diff::hashing::algorithm::sha256);
++	archive_diff::hashing::hasher hasher_sha256_region(archive_diff::hashing::hash_hash_algorithm::sha256);
+ 
+ 	while (read < file_size)
+ 	{
+diff --git a/src/native/tools/extract/extract.cpp b/src/native/tools/extract/extract.cpp
+index 88f3f87..bb94b41 100644
+--- a/src/native/tools/extract/extract.cpp
++++ b/src/native/tools/extract/extract.cpp
+@@ -140,7 +140,7 @@ void extract_items(
+ 	kitchen.clear_requested_items();
+ 	for (const auto &item : items)
+ 	{
+-		if (!item.has_hash_for_alg(archive_diff::hashing::algorithm::sha256))
++		if (!item.has_hash_for_alg(archive_diff::hashing::hash_hash_algorithm::sha256))
+ 		{
+ 			continue;
+ 		}
+@@ -149,7 +149,7 @@ void extract_items(
+ 		auto hashes = item.get_hashes();
+ 		for (const auto &hash : hashes)
+ 		{
+-			if (hash.first == archive_diff::hashing::algorithm::sha256)
++			if (hash.first == archive_diff::hashing::hash_hash_algorithm::sha256)
+ 			{
+ 				item_path        = target_path / hash.second.get_data_string();
+ 				item_paths[item] = item_path;
+@@ -240,7 +240,7 @@ int extract(fs::path source_path, fs::path diff_path, std::string hash, size_t s
+ 	}
+ 	std::string_view hash_view{hash_data.data(), hash_data.size()};
+ 	auto hash_value =
+-		archive_diff::hashing::hash::import_hash_value(archive_diff::hashing::algorithm::sha256, hash_view);
++		archive_diff::hashing::hash::import_hash_value(archive_diff::hashing::hash_hash_algorithm::sha256, hash_view);
+ 	item = item.with_hash(hash_value);
+ 	printf("Item: %s\n", item.to_string().c_str());
+ 
+diff --git a/src/native/tools/recompress/recompress.cpp b/src/native/tools/recompress/recompress.cpp
+index c8a3e40..cfd5256 100644
+--- a/src/native/tools/recompress/recompress.cpp
++++ b/src/native/tools/recompress/recompress.cpp
+@@ -120,7 +120,7 @@ bool compare_file_hashes(fs::path &file1, fs::path &file2, const std::string &ha
+ 
+ std::string get_filehash_string(fs::path &path)
+ {
+-	archive_diff::hashing::hasher hasher(archive_diff::hashing::algorithm::sha256);
++	archive_diff::hashing::hasher hasher(archive_diff::hashing::hash_hash_algorithm::sha256);
+ 
+ 	auto reader = archive_diff::io::file::io_device::make_reader(path.string());
+ 	archive_diff::io::sequential::basic_reader_wrapper seq(reader);
+diff --git a/src/native/tools/recompress/recompress_tool.cpp b/src/native/tools/recompress/recompress_tool.cpp
+index b2c4ccc..af9aee7 100644
+--- a/src/native/tools/recompress/recompress_tool.cpp
++++ b/src/native/tools/recompress/recompress_tool.cpp
+@@ -179,7 +179,7 @@ std::string replace(const std::string &s, std::span<char> find_values, char repl
+ 
+ archive_diff::hashing::hash hash_reader(archive_diff::io::reader &reader)
+ {
+-	archive_diff::hashing::hasher hasher(archive_diff::hashing::algorithm::sha256);
++	archive_diff::hashing::hasher hasher(archive_diff::hashing::hash_hash_algorithm::sha256);
+ 
+ 	const size_t block_size = 8 * 1024;
+ 
+diff --git a/src/native/tools/zstd_compress_file/get_file_hash.cpp b/src/native/tools/zstd_compress_file/get_file_hash.cpp
+index 76f89b5..5a9f3eb 100644
+--- a/src/native/tools/zstd_compress_file/get_file_hash.cpp
++++ b/src/native/tools/zstd_compress_file/get_file_hash.cpp
+@@ -16,7 +16,7 @@ std::vector<char> get_file_hash(fs::path path)
+ 	auto reader = archive_diff::io::file::io_device::make_reader(path.string());
+ 	archive_diff::io::sequential::basic_reader_wrapper wrapped_reader(reader);
+ 
+-	archive_diff::hashing::hasher hasher(archive_diff::hashing::algorithm::sha256);
++	archive_diff::hashing::hasher hasher(archive_diff::hashing::hash_hash_algorithm::sha256);
+ 
+ 	const size_t block_size = 1024 * 1024;
+ 	std::vector<char> read_buffer;
+-- 
+2.34.1
+

@@ -1,0 +1,32 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Yocto Build <build@yoctoproject.org>
+Date: Thu, 12 Dec 2024 00:00:00 +0000
+Subject: [PATCH] Use PkgConfig to find e2fsprogs for Yocto builds
+
+Yocto's e2fsprogs package doesn't provide CMake config files, so use
+pkg-config instead to locate the library.
+
+Upstream-Status: Inappropriate [Yocto-specific]
+Signed-off-by: Yocto Build <build@yoctoproject.org>
+---
+ src/native/tools/dumpextfs/CMakeLists.txt | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/src/native/tools/dumpextfs/CMakeLists.txt b/src/native/tools/dumpextfs/CMakeLists.txt
+index 1111111..2222222 100644
+--- a/src/native/tools/dumpextfs/CMakeLists.txt
++++ b/src/native/tools/dumpextfs/CMakeLists.txt
+@@ -4,7 +4,10 @@ add_executable(dumpextfs
+         utils.cpp
+     )
+ 
+-find_package(e2fsprogs REQUIRED)
++# Use PkgConfig to find e2fsprogs since it doesn't provide CMake config in Yocto
++find_package(PkgConfig REQUIRED)
++pkg_check_modules(E2FSPROGS REQUIRED ext2fs)
++
+ target_include_directories(dumpextfs PRIVATE ${E2FSPROGS_INCLUDE_DIRS})
+ target_link_libraries(dumpextfs PRIVATE ${E2FSPROGS_LIBRARIES})
+ 
+-- 
+2.39.0
